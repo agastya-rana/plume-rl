@@ -1,9 +1,11 @@
 import numpy as np
 import pytest
 
-from src.models.odor_navigation_environment import FlySpatialParameters, standardize_angle, MAX_HISTORY_LENGTH, \
-    detect_local_odor_concentration, OdorHistory, angle_to_unit_vector, WindDirections
 from src.models.action_definitions import TurnFunctions, TurnActionEnum
+from src.models.odor_navigation_environment import FlySpatialParameters, standardize_angle, MAX_HISTORY_LENGTH, \
+    detect_local_odor_concentration, OdorHistory, angle_to_unit_vector, WindDirections, PlumeNavigationEnvironment, \
+    PLUME_VIDEO_Y_BOUNDS, PLUME_VIDEO_X_BOUNDS, OdorPlume
+from src.models.simulation_events import SimulationEvent
 
 
 @pytest.fixture
@@ -19,6 +21,19 @@ def max_history_length():
 @pytest.fixture
 def odor_history():
     return OdorHistory()
+
+@pytest.fixture
+def odor_plume():
+    return OdorPlume()
+
+@pytest.fixture()
+def plume_navigation_environment(fly_spatial_parameters: FlySpatialParameters,
+                                 odor_history: OdorHistory,
+                                 odor_plume: OdorPlume):
+
+    return PlumeNavigationEnvironment(fly_spatial_parameters=fly_spatial_parameters,
+                                      odor_history=odor_history,
+                                      odor_plume=odor_plume)
 
 
 def test_fly_should_be_north_of_starting_position_after_walking_north_from_starting_position(fly_spatial_parameters):
@@ -114,18 +129,17 @@ def test_fly_should_update_odor_history_using_local_odor_concentration(fly_spati
     fly_spatial_parameters.position = random_position
     odor_plume_frame = np.ones([100, 100])
     local_odor_concentration = detect_local_odor_concentration(fly_spatial_parameters.position, odor_plume_frame)
-    odor_history.update_odor_history(fly_spatial_parameters.position, odor_plume_frame)
-    assert odor_history.odor_history[-1] == local_odor_concentration
+    odor_history.update(fly_spatial_parameters.position, odor_plume_frame)
+    assert odor_history.value[-1] == local_odor_concentration
 
 
 def test_updating_odor_history_should_preserve_odor_history_length(fly_spatial_parameters, odor_history):
     random_position = np.array([12.3, 98.7])
     fly_spatial_parameters.position = random_position
     odor_plume_frame = np.ones([100, 100])
-    local_odor_concentration = detect_local_odor_concentration(fly_spatial_parameters.position, odor_plume_frame)
-    start_size = odor_history.odor_history.size
-    odor_history.update_odor_history(fly_spatial_parameters.position, odor_plume_frame)
-    end_size = odor_history.odor_history.size
+    start_size = odor_history.value.size
+    odor_history.update(fly_spatial_parameters.position, odor_plume_frame)
+    end_size = odor_history.value.size
     assert start_size == end_size
 
 
@@ -163,4 +177,20 @@ def test_action_upwind_turn_from_facing_east_in_northerly_wind_should_yield_orie
     assert fly_spatial_parameters.orientation == expected_angle
 
 
+def test_reset_plume_nav_env_should_randomize_fly_near_plume(plume_navigation_environment, fly_spatial_parameters):
+    plume_x_bounds: np.ndarray = PLUME_VIDEO_X_BOUNDS  # Bounds taken from Nirag
+    plume_y_bounds = np.ndarray = PLUME_VIDEO_Y_BOUNDS  # Bounds taken from Nirag
 
+    print(fly_spatial_parameters)
+
+    plume_navigation_environment.reset(seed=42)
+    assert (plume_x_bounds[0] < fly_spatial_parameters.position[0]) & \
+           (plume_x_bounds[1] > fly_spatial_parameters.position[0]) & \
+           (plume_y_bounds[0] < fly_spatial_parameters.position[1]) & \
+           (plume_y_bounds[1] > fly_spatial_parameters.position[1])
+"""
+def test_reset_plume_nav_env_should_return_an_odor_history_vector(plume_navigation_environment):
+
+    observation = plume_navigation_environment.reset()
+    assert len(observation) == MAX_HISTORY_LENGTH
+"""
