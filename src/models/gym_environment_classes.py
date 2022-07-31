@@ -1,14 +1,17 @@
-from typing import Optional, Union, Tuple, Callable, Any
+from typing import Optional, Union, Tuple
 
 import numpy as np
 from gym import Env
 from gym.core import ObsType, ActType
 
-from src.models.odor_navigation_environment import WindDirections, FlySpatialParameters, OdorHistory, GoalZone
+from src.models.action_definitions import TurnActionEnum, TurnFunctions
+from src.models.goals import GoalZone
+from src.models.fly_spatial_parameters import FlySpatialParameters
+from src.models.odor_histories import OdorHistory
+from src.models.wind_directions import WindDirections
+from src.models.odor_plumes import OdorPlume
 from src.models.reward_schemes import RewardScheme, RewardSchemeEnum, SimpleOdorHistoryRewardScheme, \
     GoalZoneRewardScheme
-from src.models.action_definitions import TurnActionEnum, TurnFunctions
-from src.models.odor_plumes import OdorPlume
 
 
 class PlumeNavigationEnvironment(Env):
@@ -57,22 +60,19 @@ class PlumeNavigationEnvironment(Env):
         reward = self.reward
         return self.odor_history.value, reward, False, {'data': None}  # observation, reward, done, info
 
+    def render(self, mode="human"):
+        pass
+
     @property
     def turn_functions(self):
         turn_functions = TurnFunctions(wind_params=self.wind_directions).turn_functions
         return turn_functions
 
-    def render(self, mode="human"):
-        pass
-
     @property
-    def reward(self):
-        print('reward property accessed')
-        print(self.reward_flag)
+    def reward(self) -> float:
         if self.reward_flag is RewardSchemeEnum.SIMPLE_ODOR_HISTORY:
-            reward_scheme = SimpleOdorHistoryRewardScheme(odor_history=self.odor_history)
+            reward_scheme: RewardScheme = SimpleOdorHistoryRewardScheme(odor_history=self.odor_history)
         else:
-            reward_scheme = GoalZoneRewardScheme(goal_zone=GoalZone(),
-                                                 test_position=self.fly_spatial_parameters.position)
+            reward_scheme: RewardScheme = GoalZoneRewardScheme(goal_zone=GoalZone(),
+                                                               test_position=self.fly_spatial_parameters.position)
         return reward_scheme.get_reward()
-

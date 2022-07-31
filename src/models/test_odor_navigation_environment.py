@@ -1,14 +1,16 @@
 import numpy as np
 import pytest
 
-from src.models.odor_navigation_environment import FlySpatialParameters, MAX_HISTORY_LENGTH, \
-    detect_local_odor_concentration, OdorHistory, WindDirections, GOAL_X, GOAL_Y, GOAL_RADIUS
-from src.models.reward_schemes import SimpleOdorHistoryRewardScheme, RewardSchemeEnum
 from src.models.action_definitions import TurnActionEnum, TurnFunctions
-from src.models.gym_environment_classes import PlumeNavigationEnvironment
 from src.models.geometry import standardize_angle, angle_to_unit_vector
+from src.models.gym_environment_classes import PlumeNavigationEnvironment
+from src.models.goals import GOAL_RADIUS, GOAL_Y, GOAL_X
+from src.models.fly_spatial_parameters import FlySpatialParameters
+from src.models.odor_histories import MAX_HISTORY_LENGTH, detect_local_odor_concentration, OdorHistory
+from src.models.wind_directions import WindDirections
 from src.models.odor_plumes import PLUME_VIDEO_Y_BOUNDS, PLUME_VIDEO_X_BOUNDS, OdorPlumeAllOnes, OdorPlumeAlternating, \
     OdorPlumeAllZeros
+from src.models.reward_schemes import RewardSchemeEnum
 
 
 @pytest.fixture

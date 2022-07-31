@@ -1,14 +1,12 @@
 import enum
-from abc import abstractmethod
 from typing import Protocol, Any
 
-import numpy as np
-
-from src.models.odor_navigation_environment import OdorHistory, GoalZone
+from src.models.goals import GoalZone
+from src.models.odor_histories import OdorHistory
 
 
 @enum.unique
-class RewardSchemeEnum(enum.Enum):
+class RewardSchemeEnum(enum.IntEnum):
     SIMPLE_ODOR_HISTORY = enum.auto()
     GOAL_ZONE = enum.auto()
 
@@ -36,7 +34,6 @@ class GoalZoneRewardScheme:
 
     def get_reward(self) -> float:
         if self.goal_zone.is_in_goal_zone(test_position=self.test_position):
-            print('here')
             return 1
         else:
             return 0

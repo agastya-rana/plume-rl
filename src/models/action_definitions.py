@@ -5,7 +5,7 @@ from typing import Callable
 import numpy as np
 
 from src.models.geometry import AngleField
-from src.models.odor_navigation_environment import WindDirections
+from src.models.wind_directions import WindDirections
 
 
 @enum.unique
