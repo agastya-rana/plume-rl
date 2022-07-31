@@ -4,7 +4,8 @@ from typing import Callable
 
 import numpy as np
 
-from src.models.odor_navigation_environment import WindDirections, FlySpatialParameters, AngleField
+from src.models.geometry import AngleField
+from src.models.odor_navigation_environment import WindDirections
 
 
 @enum.unique
@@ -17,11 +18,17 @@ class TurnActionEnum(enum.Enum):
 
 
 class TurnFunctions:
-    working_angular_deviation = AngleField()
+    """
+    Instances require wind information. They have an attribute 'turn_functions' which is a dictionary
+    mapping the enum items (no turn, upwind, etc.) to functions of fly angle. These functions take current fly angle
+    and return the turn angle that must be added to current fly angle in order to satisfy the meaning of 'upwind turn,'
+    'downwind turn,' etc
+    """
 
     def __init__(self, wind_params: WindDirections):
-        self.wind_params = wind_params
-        self.turn_functions = self.create_turn_functions()
+        self.working_angular_deviation = AngleField()
+        self.wind_params: WindDirections = wind_params
+        self.turn_functions: dict[TurnActionEnum, Callable[[float], float]] = self.create_turn_functions()
 
     def turn_against_orientation_sign(self, fly_orientation: float, orientation: float) -> int:
         """
@@ -42,8 +49,8 @@ class TurnFunctions:
         return turn_sign * turn_magnitude
 
     @staticmethod
-    def no_turn(current_orientation: float) -> float:
-        return current_orientation
+    def no_turn(fly_orientation: float) -> float:
+        return fly_orientation
 
     def create_turn_functions(self) -> dict[TurnActionEnum, Callable[[float], float]]:
         turn_funcs = {TurnActionEnum.NO_TURN: self.no_turn,
