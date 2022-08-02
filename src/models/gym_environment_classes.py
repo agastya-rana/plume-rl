@@ -1,7 +1,7 @@
 from typing import Optional, Union, Tuple
 
 import numpy as np
-from gym import Env
+from gym import Env, spaces
 from gym.core import ObsType, ActType
 
 from src.models.action_definitions import TurnActionEnum, TurnFunctions
@@ -32,6 +32,7 @@ class PlumeNavigationEnvironment(Env):
         self.odor_history = odor_history
         self.odor_plume = odor_plume
         self.reward_flag = reward_flag
+        self.observation_space = spaces.Box(low=0, high=1, shape=(1000,))
 
     def reset(
             self,

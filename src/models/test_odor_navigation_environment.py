@@ -1,7 +1,12 @@
 import numpy as np
 import pytest
+from gym import spaces
 
 from src.models.action_definitions import TurnActionEnum, TurnFunctions
+from src.models.environment_factory import plume_navigation_environment_plume_all_ones_simple_odor_hist_reward_factory, \
+    plume_navigation_environment_plume_all_zeros_simple_odor_hist_reward_factory, \
+    plume_navigation_environment_plume_alternating_simple_odor_hist_reward_factory, \
+    plume_navigation_environment_plume_alternating_goal_zone_reward_factory
 from src.models.geometry import standardize_angle, angle_to_unit_vector
 from src.models.gym_environment_classes import PlumeNavigationEnvironment
 from src.models.goals import GOAL_RADIUS, GOAL_Y, GOAL_X
@@ -34,15 +39,20 @@ def odor_plume_all_ones():
 
 
 @pytest.fixture()
-def plume_navigation_environment_plume_all_ones_simple_odor_hist_reward(fly_spatial_parameters,
-                                                                        odor_history,
-                                                                        odor_plume_all_ones):
-    wind_directions = WindDirections()
-    return PlumeNavigationEnvironment(wind_directions=wind_directions,
-                                      fly_spatial_parameters=fly_spatial_parameters,
-                                      odor_history=odor_history,
-                                      odor_plume=odor_plume_all_ones,
-                                      reward_flag=RewardSchemeEnum.SIMPLE_ODOR_HISTORY)
+def plume_navigation_environment_plume_all_ones_simple_odor_hist_reward():
+    return plume_navigation_environment_plume_all_ones_simple_odor_hist_reward_factory()
+
+@pytest.fixture()
+def plume_navigation_environment_plume_all_zeros_simple_odor_hist_reward():
+    return plume_navigation_environment_plume_all_zeros_simple_odor_hist_reward_factory()
+
+@pytest.fixture()
+def plume_navigation_environment_plume_alternating_simple_odor_hist_reward():
+    return plume_navigation_environment_plume_alternating_simple_odor_hist_reward_factory()
+
+@pytest.fixture()
+def plume_navigation_environment_plume_alternating_goal_zone_reward_factor():
+    return plume_navigation_environment_plume_alternating_goal_zone_reward_factory()
 
 
 def test_fly_should_be_north_of_starting_position_after_walking_north_from_starting_position(fly_spatial_parameters):
@@ -185,6 +195,13 @@ def test_action_upwind_turn_from_facing_east_in_northerly_wind_should_yield_orie
     assert fly_spatial_parameters.orientation == expected_angle
 
 
+def test_can_declare_box(
+        plume_navigation_environment_plume_all_ones_simple_odor_hist_reward):
+    my_environment = plume_navigation_environment_plume_all_ones_simple_odor_hist_reward
+    assert my_environment is not None
+
+
+""""
 def test_reset_plume_nav_env_should_randomize_fly_near_plume(
         plume_navigation_environment_plume_all_ones_simple_odor_hist_reward,
         fly_spatial_parameters):
@@ -279,3 +296,4 @@ def test_fly_inside_goal_zone_and_goal_zone_reward_scheme_should_yield_reward_ab
         np.array([GOAL_X, GOAL_Y])
     _, reward, _, _ = plume_navigation_environment_plume_all_ones_simple_odor_hist_reward.step(action)
     assert reward > 0
+"""
