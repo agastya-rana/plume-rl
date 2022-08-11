@@ -17,7 +17,8 @@ from src.models.odor_plumes import PLUME_VIDEO_Y_BOUNDS, PLUME_VIDEO_X_BOUNDS
 class TestPlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWind:
     plume_env = PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFactory().plume_environment
 
-    def _in_bounds(self, position):
+    @staticmethod
+    def _in_bounds(position):
         plume_x_bounds: np.ndarray = PLUME_VIDEO_X_BOUNDS  # Bounds taken from Nirag
         plume_y_bounds = np.ndarray = PLUME_VIDEO_Y_BOUNDS  # Bounds taken from Nirag
         in_bounds = (plume_x_bounds[0] <
@@ -103,7 +104,6 @@ class TestPlumeNavigationEnvironmentPlumeAlternatingSimpleOdorHistRewardWesterly
         expected_reward = 0
         assert reward == expected_reward
 
-
     def test_fly_inside_goal_zone_and_goal_zone_reward_scheme_should_yield_reward_above_zero(self):
         self.plume_env.reset()
         action = TurnActionEnum.UPWIND_TURN.value
@@ -111,4 +111,3 @@ class TestPlumeNavigationEnvironmentPlumeAlternatingSimpleOdorHistRewardWesterly
             np.array([GOAL_X, GOAL_Y])
         _, reward, _, _ = self.plume_env.step(action)
         assert reward > 0
-

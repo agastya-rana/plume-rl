@@ -8,7 +8,7 @@ from src.models.reward_schemes import RewardSchemeEnum
 from src.models.wind_directions import WindDirections
 
 
-class PlumeNavigationBaseEnvironmentFactory():
+class PlumeNavigationBaseEnvironmentFactory:
     def __init__(self):
         self.fly_spatial_parameters = FlySpatialParameters(orientation=0, position=np.array([0, 0]))
         self.odor_history = OdorHistory()
@@ -22,9 +22,9 @@ class PlumeNavigationBaseEnvironmentFactory():
 
 
 class PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFactory(
-    PlumeNavigationBaseEnvironmentFactory):
+                                         PlumeNavigationBaseEnvironmentFactory):
     @property
-    def plume_environment(self):
+    def plume_environment(self) -> PlumeNavigationEnvironment:
         return PlumeNavigationEnvironment(wind_directions=self.westerly_wind,
                                           fly_spatial_parameters=self.fly_spatial_parameters,
                                           odor_history=self.odor_history,
@@ -33,9 +33,9 @@ class PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFact
 
 
 class PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardNortherlyWindFactory(
-    PlumeNavigationBaseEnvironmentFactory):
+                                       PlumeNavigationBaseEnvironmentFactory):
     @property
-    def plume_environment(self):
+    def plume_environment(self) -> PlumeNavigationEnvironment:
         return PlumeNavigationEnvironment(wind_directions=self.northerly_wind,
                                           fly_spatial_parameters=self.fly_spatial_parameters,
                                           odor_history=self.odor_history,
@@ -44,9 +44,9 @@ class PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardNortherlyWindFac
 
 
 class PlumeNavigationEnvironmentAlternatingPlumeSimpleOdorHistRewardWesterlyWindFactory(
-    PlumeNavigationBaseEnvironmentFactory):
+                                                        PlumeNavigationBaseEnvironmentFactory):
     @property
-    def plume_environment(self):
+    def plume_environment(self) -> PlumeNavigationEnvironment:
         return PlumeNavigationEnvironment(wind_directions=self.westerly_wind,
                                           fly_spatial_parameters=self.fly_spatial_parameters,
                                           odor_history=self.odor_history,
@@ -55,9 +55,9 @@ class PlumeNavigationEnvironmentAlternatingPlumeSimpleOdorHistRewardWesterlyWind
 
 
 class PlumeNavigationEnvironmentPlumeZerosSimpleOdorHistRewardWesterlyWindFactory(
-    PlumeNavigationBaseEnvironmentFactory):
+                                             PlumeNavigationBaseEnvironmentFactory):
     @property
-    def plume_environment(self):
+    def plume_environment(self) -> PlumeNavigationEnvironment:
         return PlumeNavigationEnvironment(wind_directions=self.westerly_wind,
                                           fly_spatial_parameters=self.fly_spatial_parameters,
                                           odor_history=self.odor_history,
@@ -66,9 +66,9 @@ class PlumeNavigationEnvironmentPlumeZerosSimpleOdorHistRewardWesterlyWindFactor
 
 
 class PlumeNavigationEnvironmentPlumeAlternatingGoalZoneRewardWesterlyWindFactory(
-    PlumeNavigationBaseEnvironmentFactory):
+                                     PlumeNavigationBaseEnvironmentFactory):
     @property
-    def plume_environment(self):
+    def plume_environment(self) -> PlumeNavigationEnvironment:
         return PlumeNavigationEnvironment(wind_directions=self.westerly_wind,
                                           fly_spatial_parameters=self.fly_spatial_parameters,
                                           odor_history=self.odor_history,
