@@ -7,46 +7,70 @@ from src.models.odor_plumes import OdorPlumeAllOnes, OdorPlumeAllZeros, OdorPlum
 from src.models.reward_schemes import RewardSchemeEnum
 from src.models.wind_directions import WindDirections
 
-fly_spatial_parameters = FlySpatialParameters(orientation=0, position=np.array([0, 0]))
 
-odor_history = OdorHistory()
-
-odor_plume_all_ones = OdorPlumeAllOnes()
-
-odor_plume_all_zeros = OdorPlumeAllZeros()
-
-odor_plume_alternating = OdorPlumeAlternating()
-
-wind_directions = WindDirections()
-
-
-def plume_navigation_environment_plume_all_ones_simple_odor_hist_reward_factory():
-    return PlumeNavigationEnvironment(wind_directions=wind_directions,
-                                      fly_spatial_parameters=fly_spatial_parameters,
-                                      odor_history=odor_history,
-                                      odor_plume=odor_plume_all_ones,
-                                      reward_flag=RewardSchemeEnum.SIMPLE_ODOR_HISTORY)
+class PlumeNavigationBaseEnvironmentFactory():
+    def __init__(self):
+        self.fly_spatial_parameters = FlySpatialParameters(orientation=0, position=np.array([0, 0]))
+        self.odor_history = OdorHistory()
+        self.odor_plume_all_ones = OdorPlumeAllOnes()
+        self.odor_plume_all_zeros = OdorPlumeAllZeros()
+        self.odor_plume_alternating = OdorPlumeAlternating()
+        self.westerly_wind = WindDirections()
+        self.northerly_wind = WindDirections(wind_angle=-np.pi / 2)
+        self.easterly_wind = WindDirections(wind_angle=np.pi)
+        self.southerly_wind = WindDirections(wind_angle=np.pi / 2)
 
 
-def plume_navigation_environment_plume_all_zeros_simple_odor_hist_reward_factory():
-    return PlumeNavigationEnvironment(wind_directions=wind_directions,
-                                      fly_spatial_parameters=fly_spatial_parameters,
-                                      odor_history=odor_history,
-                                      odor_plume=odor_plume_all_zeros,
-                                      reward_flag=RewardSchemeEnum.SIMPLE_ODOR_HISTORY)
+class PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFactory(
+    PlumeNavigationBaseEnvironmentFactory):
+    @property
+    def plume_environment(self):
+        return PlumeNavigationEnvironment(wind_directions=self.westerly_wind,
+                                          fly_spatial_parameters=self.fly_spatial_parameters,
+                                          odor_history=self.odor_history,
+                                          odor_plume=self.odor_plume_all_ones,
+                                          reward_flag=RewardSchemeEnum.SIMPLE_ODOR_HISTORY)
 
 
-def plume_navigation_environment_plume_alternating_simple_odor_hist_reward_factory():
-    return PlumeNavigationEnvironment(wind_directions=wind_directions,
-                                      fly_spatial_parameters=fly_spatial_parameters,
-                                      odor_history=odor_history,
-                                      odor_plume=odor_plume_alternating,
-                                      reward_flag=RewardSchemeEnum.SIMPLE_ODOR_HISTORY)
+class PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardNortherlyWindFactory(
+    PlumeNavigationBaseEnvironmentFactory):
+    @property
+    def plume_environment(self):
+        return PlumeNavigationEnvironment(wind_directions=self.northerly_wind,
+                                          fly_spatial_parameters=self.fly_spatial_parameters,
+                                          odor_history=self.odor_history,
+                                          odor_plume=self.odor_plume_all_ones,
+                                          reward_flag=RewardSchemeEnum.SIMPLE_ODOR_HISTORY)
 
 
-def plume_navigation_environment_plume_alternating_goal_zone_reward_factory():
-    return PlumeNavigationEnvironment(wind_directions=wind_directions,
-                                      fly_spatial_parameters=fly_spatial_parameters,
-                                      odor_history=odor_history,
-                                      odor_plume=odor_plume_alternating,
-                                      reward_flag=RewardSchemeEnum.GOAL_ZONE)
+class PlumeNavigationEnvironmentAlternatingPlumeSimpleOdorHistRewardWesterlyWindFactory(
+    PlumeNavigationBaseEnvironmentFactory):
+    @property
+    def plume_environment(self):
+        return PlumeNavigationEnvironment(wind_directions=self.westerly_wind,
+                                          fly_spatial_parameters=self.fly_spatial_parameters,
+                                          odor_history=self.odor_history,
+                                          odor_plume=self.odor_plume_alternating,
+                                          reward_flag=RewardSchemeEnum.SIMPLE_ODOR_HISTORY)
+
+
+class PlumeNavigationEnvironmentPlumeZerosSimpleOdorHistRewardWesterlyWindFactory(
+    PlumeNavigationBaseEnvironmentFactory):
+    @property
+    def plume_environment(self):
+        return PlumeNavigationEnvironment(wind_directions=self.westerly_wind,
+                                          fly_spatial_parameters=self.fly_spatial_parameters,
+                                          odor_history=self.odor_history,
+                                          odor_plume=self.odor_plume_all_zeros,
+                                          reward_flag=RewardSchemeEnum.SIMPLE_ODOR_HISTORY)
+
+
+class PlumeNavigationEnvironmentPlumeAlternatingGoalZoneRewardWesterlyWindFactory(
+    PlumeNavigationBaseEnvironmentFactory):
+    @property
+    def plume_environment(self):
+        return PlumeNavigationEnvironment(wind_directions=self.westerly_wind,
+                                          fly_spatial_parameters=self.fly_spatial_parameters,
+                                          odor_history=self.odor_history,
+                                          odor_plume=self.odor_plume_alternating,
+                                          reward_flag=RewardSchemeEnum.GOAL_ZONE)

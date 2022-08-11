@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import numpy as np
-from gym import spaces
 
 GOAL_RADIUS = 100
 GOAL_Y = 450

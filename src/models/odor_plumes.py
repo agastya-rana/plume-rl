@@ -11,11 +11,9 @@ class OdorPlume(Protocol):
     frame_number: int
     frame: np.ndarray
 
-    @abstractmethod
     def reset(self) -> list[int | np.ndarray]:
         pass
 
-    @abstractmethod
     def advance(self) -> list[int | np.ndarray]:
         pass
 
