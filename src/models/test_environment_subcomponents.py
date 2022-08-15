@@ -1,11 +1,14 @@
 import numpy as np
 import pytest
+from matplotlib.testing.decorators import check_figures_equal
 
 from src.models.action_definitions import TurnFunctions, TurnActionEnum
 from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.geometry import standardize_angle, angle_to_unit_vector
 from src.models.odor_histories import detect_local_odor_concentration, MAX_HISTORY_LENGTH, OdorHistory
-from src.models.odor_plumes import OdorPlumeAllOnes
+from src.models.odor_plumes import OdorPlumeAllOnes, OdorPlumeAllZeros
+from src.models.render_environment import render_odor_plume_frame_no_fly, gen_arrow_head_marker, FLY_MARKER_SIZE, \
+    FLY_MARKER_COLOR, render_fly
 from src.models.wind_directions import WindDirections
 
 
@@ -147,6 +150,43 @@ def test_action_upwind_turn_from_facing_east_in_northerly_wind_should_yield_orie
         turn_funcs[TurnActionEnum.UPWIND_TURN](fly_spatial_parameters.orientation)
     expected_angle = np.pi / 6
     assert fly_spatial_parameters.orientation == expected_angle
+
+
+@check_figures_equal(extensions=["png"])
+def test_rendering_all_ones_plume_canvas_with_no_fly_creates_1500x900_white_image(fig_test, fig_ref):
+    ref_canvas = np.ones([1500, 900])
+    ax_ref = fig_ref.subplots()
+    ax_ref.imshow(ref_canvas.T, origin='lower', cmap='gray', vmin=0, vmax=1)
+    ax_test = fig_test.subplots()
+    all_ones_plume = OdorPlumeAllOnes()
+    render_odor_plume_frame_no_fly(plume_frame=all_ones_plume.frame, plot_axis=ax_test)
+
+
+@check_figures_equal(extensions=["png"])
+def test_rendering_all_zeros_plume_canvas_with_no_fly_creates_1500x900_black_image(fig_test, fig_ref):
+    ref_canvas = np.zeros([1500, 900])
+    ax_ref = fig_ref.subplots()
+    ax_ref.imshow(ref_canvas.T, origin='lower', cmap='gray', vmin=0, vmax=1)
+    ax_test = fig_test.subplots()
+    all_zeros_plume = OdorPlumeAllZeros()
+    render_odor_plume_frame_no_fly(plume_frame=all_zeros_plume.frame, plot_axis=ax_test)
+
+
+@check_figures_equal(extensions=["png"])
+def test_rendering_all_zeros_plume_canvas_with_fly_at_origin_facing_north_should_add_an_upwards_blue_triangle(fig_test,
+                                                                                                              fig_ref):
+    ref_canvas = np.zeros([1500, 900])
+    ax_ref = fig_ref.subplots()
+    ax_ref.imshow(ref_canvas.T, origin='lower', cmap='gray', vmin=0, vmax=1)
+    origin = np.array([0, 0])
+    north = np.pi / 2
+    north_arrow, scale = gen_arrow_head_marker(rot=north)
+    ax_ref.scatter(origin[0], origin[1], marker=north_arrow, s=(FLY_MARKER_SIZE * scale) ** 2, c=FLY_MARKER_COLOR)
+    ax_test = fig_test.subplots()
+    all_zeros_plume = OdorPlumeAllZeros()
+    fly = FlySpatialParameters(orientation=north, position=origin)
+    ax_test = render_odor_plume_frame_no_fly(plume_frame=all_zeros_plume.frame, plot_axis=ax_test)
+    render_fly(position=fly.position, orientation=fly.orientation, plot_axis=ax_test)
 
 
 @pytest.fixture

@@ -3,6 +3,7 @@ from typing import Optional, Union, Tuple
 import numpy as np
 from gym import Env, spaces
 from gym.core import ObsType, ActType
+from matplotlib import pyplot as plt
 
 from src.models.action_definitions import TurnActionEnum, TurnFunctions
 from src.models.goals import GoalZone
@@ -33,6 +34,8 @@ class PlumeNavigationEnvironment(Env):
         self.odor_plume = odor_plume
         self.reward_flag = reward_flag
         self.observation_space = spaces.Box(low=0, high=1, shape=(1000,))
+        self.render_fig = plt.figure()
+        self.render_ax = self.render_fig.add_subplot(111)
 
     def reset(
             self,
@@ -62,7 +65,7 @@ class PlumeNavigationEnvironment(Env):
         return self.odor_history.value, reward, False, {'data': None}  # observation, reward, done, info
 
     def render(self, mode="human"):
-        pass
+        assert mode in ["human", "rgb_array"], "Invalid mode: must be \'human\' or \'rgb_array\'"
 
     @property
     def turn_functions(self):
