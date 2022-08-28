@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import io
 from matplotlib.testing.decorators import check_figures_equal
 
 from src.models.action_definitions import TurnFunctions, TurnActionEnum
@@ -188,6 +189,7 @@ def test_rendering_all_zeros_plume_canvas_with_fly_at_origin_facing_north_should
     ax_test = render_odor_plume_frame_no_fly(plume_frame=all_zeros_plume.frame, plot_axis=ax_test)
     render_fly(position=fly.position, orientation=fly.orientation, plot_axis=ax_test)
 
+def test_export_fig_to_rgb_array()
 
 @pytest.fixture
 def fly_spatial_parameters():

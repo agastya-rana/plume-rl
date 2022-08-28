@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 
 FLY_MARKER_COLOR = 'firebrick'
 
-FLY_MARKER_SIZE = 25
+FLY_MARKER_SIZE = 5
 
 
 def render_odor_plume_frame_no_fly(plume_frame: np.ndarray, plot_axis: plt.Axes) -> plt.Axes:
@@ -19,6 +19,7 @@ def render_fly(position: np.ndarray, orientation: float, plot_axis: plt.Axes):
     plot_axis.scatter(position[0], position[1], marker=arrow_marker, s=(FLY_MARKER_SIZE * scale) ** 2,
                       c=FLY_MARKER_COLOR)
     return plot_axis
+
 
 
 def gen_arrow_head_marker(rot):
