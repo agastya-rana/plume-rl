@@ -63,3 +63,4 @@ class TurnFunctions:
                       TurnActionEnum.DOWNWIND_TURN: functools.partial(
                           self.turn_against_orientation, orientation=self.wind_params.downwind)}
         return turn_funcs
+
