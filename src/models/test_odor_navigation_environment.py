@@ -3,14 +3,17 @@ import pytest
 
 from src.models.action_definitions import TurnActionEnum
 
-from src.models.environment_factory import \
+from src.models.history_environment_factory import \
     PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFactory, \
     PlumeNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardNortherlyWindFactory, \
     PlumeNavigationEnvironmentAlternatingPlumeSimpleOdorHistRewardWesterlyWindFactory, \
     PlumeNavigationEnvironmentPlumeZerosSimpleOdorHistRewardWesterlyWindFactory, \
     PlumeNavigationEnvironmentPlumeAlternatingGoalZoneRewardWesterlyWindFactory
 from src.models.goals import GOAL_X, GOAL_RADIUS, GOAL_Y
-from src.models.odor_histories import MAX_HISTORY_LENGTH
+from src.models.motion_environment_factory import \
+    PlumeMotionNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFactory, \
+    PlumeMotionNavigationEnvironmentPlumeRollingSimpleOdorHistRewardWesterlyWindFactory
+from src.models.odor_senses import MAX_HISTORY_LENGTH
 from src.models.odor_plumes import PLUME_VIDEO_Y_BOUNDS, PLUME_VIDEO_X_BOUNDS
 
 
@@ -111,3 +114,41 @@ class TestPlumeNavigationEnvironmentPlumeAlternatingSimpleOdorHistRewardWesterly
             np.array([GOAL_X, GOAL_Y])
         _, reward, _, _ = self.plume_env.step(action)
         assert reward > 0
+
+
+class TestPlumeNavigationMotionEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWind:
+    plume_env = PlumeMotionNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFactory().plume_environment
+
+    @staticmethod
+    def _in_bounds(position):
+        plume_x_bounds: np.ndarray = PLUME_VIDEO_X_BOUNDS  # Bounds taken from Nirag
+        plume_y_bounds = np.ndarray = PLUME_VIDEO_Y_BOUNDS  # Bounds taken from Nirag
+        in_bounds = (plume_x_bounds[0] <
+                     position[0]) & \
+                    (plume_x_bounds[1] >
+                     position[0]) & \
+                    (plume_y_bounds[0] <
+                     position[1]) & \
+                    (plume_y_bounds[1] >
+                     position[1])
+        return in_bounds
+
+    def test_reset_plume_nav_env_should_yield_all_ones_prior_frame(self):
+        self.plume_env.reset(seed=42)
+        expected_prior_frame = np.ones([PLUME_VIDEO_X_BOUNDS[1], PLUME_VIDEO_Y_BOUNDS[1]])
+        assert np.array_equal(self.plume_env.odor_plume.get_previous_frame(), expected_prior_frame)
+
+
+class TestPlumeNavigationMotionEnvironmentPlumeRollingSimpleOdorHistRewardWesterlyWind:
+    plume_env = PlumeMotionNavigationEnvironmentPlumeRollingSimpleOdorHistRewardWesterlyWindFactory().plume_environment
+
+    def test_stepping_should_roll_plume_by1(self):
+        displacement = 1
+        self.plume_env.reset()
+        last_frame = self.plume_env.odor_plume.frame
+        expected_frame = np.roll(last_frame, shift=displacement)
+        action = TurnActionEnum.UPWIND_TURN.value
+        self.plume_env.step(action)
+        consecutive_frame = self.plume_env.odor_plume.frame
+        assert np.array_equal(consecutive_frame, expected_frame)
+

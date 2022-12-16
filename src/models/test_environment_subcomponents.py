@@ -2,14 +2,15 @@ import numpy as np
 import pytest
 import io
 from matplotlib.testing.decorators import check_figures_equal
-
+from numpy.random import default_rng
 from src.models.action_definitions import TurnFunctions, TurnActionEnum
 from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.geometry import standardize_angle, angle_to_unit_vector
-from src.models.odor_histories import detect_local_odor_concentration, MAX_HISTORY_LENGTH, OdorHistory
-from src.models.odor_plumes import OdorPlumeAllOnes, OdorPlumeAllZeros
+from src.models.odor_senses import detect_local_odor_concentration, MAX_HISTORY_LENGTH, OdorHistory
+from src.models.odor_plumes import OdorPlumeAllOnes, OdorPlumeAllZeros, PLUME_VIDEO_X_BOUNDS, PLUME_VIDEO_Y_BOUNDS, \
+    OdorPlumeRollingRandom
 from src.models.render_environment import render_odor_plume_frame_no_fly, gen_arrow_head_marker, FLY_MARKER_SIZE, \
-    FLY_MARKER_COLOR, render_fly
+    FLY_MARKER_COLOR, render_oriented_fly
 from src.models.wind_directions import WindDirections
 
 
@@ -92,33 +93,6 @@ def test_fly_should_face_north_after_upwind_quarter_turn_from_zero_in_northerly_
     assert np.array_equal(fly_spatial_parameters.orientation, expected_angle)
 
 
-def test_odor1_everywhere_should_drive_local_odor_concentration_to_be_1(fly_spatial_parameters):
-    random_position = np.array([12.3, 98.7])
-    fly_spatial_parameters.position = random_position
-    odor_plume_frame = np.ones([100, 100])
-    local_odor_concentration = detect_local_odor_concentration(fly_spatial_parameters.position, odor_plume_frame)
-    assert local_odor_concentration == 1
-
-
-def test_fly_should_update_odor_history_using_local_odor_concentration(fly_spatial_parameters, odor_history):
-    random_position = np.array([12.3, 98.7])
-    fly_spatial_parameters.position = random_position
-    odor_plume_frame = np.ones([100, 100])
-    local_odor_concentration = detect_local_odor_concentration(fly_spatial_parameters.position, odor_plume_frame)
-    odor_history.update(fly_spatial_parameters.position, odor_plume_frame)
-    assert odor_history.value[-1] == local_odor_concentration
-
-
-def test_updating_odor_history_should_preserve_odor_history_length(fly_spatial_parameters, odor_history):
-    random_position = np.array([12.3, 98.7])
-    fly_spatial_parameters.position = random_position
-    odor_plume_frame = np.ones([100, 100])
-    start_size = odor_history.value.size
-    odor_history.update(fly_spatial_parameters.position, odor_plume_frame)
-    end_size = odor_history.value.size
-    assert start_size == end_size
-
-
 def test_crosswind_direction_a_should_be_orthogonal_to_wind():
     wind_directions = WindDirections(3 * np.pi / 2)
     wind_direction = angle_to_unit_vector(wind_directions.wind_angle)
@@ -151,6 +125,34 @@ def test_action_upwind_turn_from_facing_east_in_northerly_wind_should_yield_orie
         turn_funcs[TurnActionEnum.UPWIND_TURN](fly_spatial_parameters.orientation)
     expected_angle = np.pi / 6
     assert fly_spatial_parameters.orientation == expected_angle
+
+
+def test_action_step_upwind_in_westerly_wind_should_yield_walking_angle_easterly(fly_spatial_parameters):
+    wind_directions = WindDirections()
+    easterly = np.pi
+    delta_x = np.cos(wind_directions.upwind)
+    delta_y = np.sin(wind_directions.upwind)
+    assert np.allclose(easterly, np.angle(delta_x + delta_y * 1j))
+
+
+def test_consecutive_crosswind_rolling_plume_frames_should_be_displaced_by_1(plume_rolling_random_shift1):
+    displacement = 1
+    plume_rolling_random_shift1.reset()
+    last_frame = plume_rolling_random_shift1.get_previous_frame()
+    expected_frame = np.roll(last_frame, shift=displacement)
+    consecutive_frame = plume_rolling_random_shift1.frame
+    assert np.array_equal(consecutive_frame, expected_frame)
+
+
+def test_consecutive_crosswind_rolling_plume_frames_should_be_displaced_by_1_after_advancing(
+        plume_rolling_random_shift1):
+    displacement = 1
+    plume_rolling_random_shift1.reset()
+    last_frame = plume_rolling_random_shift1.frame
+    expected_frame = np.roll(last_frame, shift=displacement)
+    plume_rolling_random_shift1.advance()
+    consecutive_frame = plume_rolling_random_shift1.frame
+    assert np.array_equal(consecutive_frame, expected_frame)
 
 
 @check_figures_equal(extensions=["png"])
@@ -187,9 +189,10 @@ def test_rendering_all_zeros_plume_canvas_with_fly_at_origin_facing_north_should
     all_zeros_plume = OdorPlumeAllZeros()
     fly = FlySpatialParameters(orientation=north, position=origin)
     ax_test = render_odor_plume_frame_no_fly(plume_frame=all_zeros_plume.frame, plot_axis=ax_test)
-    render_fly(position=fly.position, orientation=fly.orientation, plot_axis=ax_test)
+    render_oriented_fly(position=fly.position, orientation=fly.orientation, plot_axis=ax_test)
 
-#def test_export_fig_to_rgb_array()
+
+# def test_export_fig_to_rgb_array()
 
 @pytest.fixture
 def fly_spatial_parameters():
@@ -209,3 +212,9 @@ def odor_history():
 @pytest.fixture
 def odor_plume_all_ones():
     return OdorPlumeAllOnes()
+
+
+@pytest.fixture
+def plume_rolling_random_shift1():
+    shift_size = 1
+    return OdorPlumeRollingRandom(roll_shift_size=shift_size)

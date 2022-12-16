@@ -8,14 +8,14 @@ from matplotlib import pyplot as plt
 from src.models.action_definitions import TurnActionEnum, TurnFunctions
 from src.models.goals import GoalZone
 from src.models.fly_spatial_parameters import FlySpatialParameters
-from src.models.odor_histories import OdorHistory
+from src.models.odor_senses import OdorHistory
 from src.models.wind_directions import WindDirections
 from src.models.odor_plumes import OdorPlume
 from src.models.reward_schemes import RewardScheme, RewardSchemeEnum, SimpleOdorHistoryRewardScheme, \
     GoalZoneRewardScheme
 
 
-class PlumeNavigationEnvironment(Env):
+class PlumeHistoryNavigationEnvironment(Env):
     """
     An environment is a collection of a fly spatial instance, an odor plume instance,
     and an odor history instance. In addition, it specifies the sequence of reset and
@@ -80,3 +80,4 @@ class PlumeNavigationEnvironment(Env):
             reward_scheme: RewardScheme = GoalZoneRewardScheme(goal_zone=GoalZone(),
                                                                test_position=self.fly_spatial_parameters.position)
         return reward_scheme.get_reward()
+

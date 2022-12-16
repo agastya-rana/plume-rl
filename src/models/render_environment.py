@@ -14,12 +14,16 @@ def render_odor_plume_frame_no_fly(plume_frame: np.ndarray, plot_axis: plt.Axes)
     return plot_axis.imshow(X=plume_frame.T, cmap='gray', vmin=0, vmax=1, origin='lower').axes
 
 
-def render_fly(position: np.ndarray, orientation: float, plot_axis: plt.Axes):
+def render_oriented_fly(position: np.ndarray, orientation: float, plot_axis: plt.Axes):
     arrow_marker, scale = gen_arrow_head_marker(orientation)
     plot_axis.scatter(position[0], position[1], marker=arrow_marker, s=(FLY_MARKER_SIZE * scale) ** 2,
                       c=FLY_MARKER_COLOR)
     return plot_axis
 
+def render_point_fly(position,plot_axis: plt.Axes):
+    plot_axis.scatter(position[0],position[1],marker='o',s=FLY_MARKER_SIZE,
+                      c=FLY_MARKER_COLOR)
+    return plot_axis
 
 
 def gen_arrow_head_marker(rot):
