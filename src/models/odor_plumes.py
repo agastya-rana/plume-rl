@@ -1,6 +1,6 @@
 import os
 
-MOVIE_PATH_1 = os.path.join('source_data', 'plume_movies', 'intermittent_smoke.avi')
+MOVIE_PATH_1 = os.path.join('src','data', 'plume_movies', 'intermittent_smoke.avi')
 from typing import Protocol
 
 import cv2

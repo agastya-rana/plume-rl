@@ -8,8 +8,8 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 
 
-def main(movie_path=os.path.join('source_data', 'plume_movies', 'intermittent_smoke.avi'),
-         q_table_path=os.path.join('src', 'data', 'updated_q.npy'),
+def main(movie_path=os.path.join('src','data', 'plume_movies', 'intermittent_smoke.avi'),
+         q_table_path=os.path.join('trained_models', 'updated_q.npy'),
          savepath=os.path.join('result_images', 'q_walking_frames')):
     environment = PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardFactory(
         movie_file_path=movie_path).plume_environment
