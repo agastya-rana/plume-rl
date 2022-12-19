@@ -11,8 +11,8 @@ from src.models.history_environment_factory import \
     PlumeNavigationEnvironmentPlumeAlternatingGoalZoneRewardWesterlyWindFactory
 from src.models.goals import GOAL_X, GOAL_RADIUS, GOAL_Y
 from src.models.motion_environment_factory import \
-    PlumeMotionNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFactory, \
-    PlumeMotionNavigationEnvironmentPlumeRollingSimpleOdorHistRewardWesterlyWindFactory
+    PlumeMotionNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWestToEastWindFactory, \
+    PlumeMotionNavigationEnvironmentPlumeRollingSimpleOdorHistRewardWestToEastWindFactory
 from src.models.odor_senses import MAX_HISTORY_LENGTH
 from src.models.odor_plumes import PLUME_VIDEO_Y_BOUNDS, PLUME_VIDEO_X_BOUNDS
 
@@ -117,7 +117,7 @@ class TestPlumeNavigationEnvironmentPlumeAlternatingSimpleOdorHistRewardWesterly
 
 
 class TestPlumeNavigationMotionEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWind:
-    plume_env = PlumeMotionNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWesterlyWindFactory().plume_environment
+    plume_env = PlumeMotionNavigationEnvironmentPlumeAllOnesSimpleOdorHistRewardWestToEastWindFactory().plume_environment
 
     @staticmethod
     def _in_bounds(position):
@@ -140,7 +140,7 @@ class TestPlumeNavigationMotionEnvironmentPlumeAllOnesSimpleOdorHistRewardWester
 
 
 class TestPlumeNavigationMotionEnvironmentPlumeRollingSimpleOdorHistRewardWesterlyWind:
-    plume_env = PlumeMotionNavigationEnvironmentPlumeRollingSimpleOdorHistRewardWesterlyWindFactory().plume_environment
+    plume_env = PlumeMotionNavigationEnvironmentPlumeRollingSimpleOdorHistRewardWestToEastWindFactory().plume_environment
 
     def test_stepping_should_roll_plume_by1(self):
         displacement = 1
