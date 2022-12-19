@@ -87,3 +87,6 @@ target/
 
 # Mypy cache
 .mypy_cache/
+
+#result images -- don't track this data
+result_images/
