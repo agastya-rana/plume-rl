@@ -22,6 +22,29 @@ class RewardScheme(Protocol):
         pass
 
 
+class GoalZoneRewardScheme:
+
+    def __init__(self, goal_zone: GoalZone, test_position):
+        self.goal_zone = goal_zone
+        self.test_position = test_position
+
+    def get_reward(self) -> float:
+        if self.goal_zone.is_in_goal_zone(test_position=self.test_position):
+            return 1
+        else:
+            return 0
+
+
+class NiragRewardScheme:
+
+    def __init__(self, odor_features: OdorFeatures):
+        self.odor_features = odor_features
+        self.threshold = ODOR_REWARD_THRESHOLD  # From Nirag
+
+    def get_reward(self) -> float:
+        return 1 * (self.odor_features.concentration > self.threshold)
+
+
 class SimpleOdorHistoryRewardScheme:
 
     def __init__(self, odor_history: OdorHistory):
@@ -40,16 +63,6 @@ class SimpleOdorFeatureRewardScheme:
         return self.odor_features.concentration
 
 
-class NiragRewardScheme:
-
-    def __init__(self, odor_features: OdorFeatures):
-        self.odor_features = odor_features
-        self.threshold = ODOR_REWARD_THRESHOLD  # From Nirag
-
-    def get_reward(self) -> float:
-        return 1 * (self.odor_features.concentration > self.threshold)
-
-
 class YMaxRewardScheme:
     """
     This class gives reward for increasing the y coordinate. Useful for testing/debugging because the expected
@@ -61,16 +74,3 @@ class YMaxRewardScheme:
 
     def get_reward(self) -> float:
         return self.y_displacement
-
-
-class GoalZoneRewardScheme:
-
-    def __init__(self, goal_zone: GoalZone, test_position):
-        self.goal_zone = goal_zone
-        self.test_position = test_position
-
-    def get_reward(self) -> float:
-        if self.goal_zone.is_in_goal_zone(test_position=self.test_position):
-            return 1
-        else:
-            return 0
