@@ -4,7 +4,6 @@ import numpy as np
 from gym import Env
 from gym.core import ObsType, ActType
 from gym.spaces import MultiDiscrete, Discrete
-from matplotlib import pyplot as plt
 
 from src.models.action_definitions import WalkActionEnum, WalkDisplacements
 from src.models.fly_spatial_parameters import FlySpatialParameters
@@ -22,8 +21,8 @@ class PlumeMotionNavigationEnvironment(Env):
     When it is initialized, it takes a bunch of parameters that define how rewards are
     calculated, what the odor plume is, what the agent senses (odor features).
     Actual instances of this class are composed in motion_environment_factory.py
-    An environment is a collection of a fly spatial instance, an odor plume instance,
-    and an odor features instance. In addition, it specifies the reset and step actions
+    This class specifies the reset and step actions that are needed for openAI gym.
+    The 'render' method is part of Gym environments but isn't implemented yet.
     """
 
     def __init__(self,
