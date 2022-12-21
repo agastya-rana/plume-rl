@@ -35,7 +35,7 @@ class PlumeMotionNavigationEnvironment(Env):
         self.prior_frame = None
         self.wind_directions = wind_directions  # given as input
         self.fly_spatial_parameters = fly_spatial_parameters  # given as input
-        self.odor_features = odor_features  # given as input MAKE DISCRETE
+        self.odor_features = odor_features
         self.odor_plume = odor_plume  # given as input
         self.reward_flag = reward_flag  # given as input, member of reward_enum tells how reward works
         self.observation_space = MultiDiscrete([2, 3, 3])  # This should go in the factory?
@@ -56,7 +56,7 @@ class PlumeMotionNavigationEnvironment(Env):
             options: Optional[dict] = None,
     ) -> Union[ObsType, Tuple[ObsType, dict]]:
         """
-        Reinialize the plume and the agent. Return the agent's initial observation.
+        Reinitialize the plume and the agent. Return the agent's initial observation.
         """
         rng: np.random.Generator = np.random.default_rng(seed)
         try:
