@@ -45,8 +45,7 @@ def measure_odor_speed(odor_array_0: np.ndarray, odor_array_1: np.ndarray) -> in
                                  for antenna_pos in range(ANTENNA_LENGTH)
                                  if antenna_pos + delta_xi in range(ANTENNA_LENGTH)])
 
-
-    if np.sum(np.amax(speeds) == speeds) != 1:# If there are ties for max speed, it's ambiguous and set to 0
+    if np.sum(np.amax(speeds) == speeds) != 1:  # If there are ties for max speed, it's ambiguous and set to 0
         delta_x_hat = 0
     else:
         delta_x_hat = delta_xs[np.argmax(speeds)]
@@ -77,7 +76,6 @@ def detect_local_odor_gradient(fly_location: np.ndarray, odor_frame: np.ndarray)
     except IndexError:
         local_odor_gradient: float = 0
     return local_odor_gradient
-
 
 
 @dataclass

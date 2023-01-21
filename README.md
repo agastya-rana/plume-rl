@@ -4,7 +4,7 @@ plume-rl
 Solve odor plume navigation problems with RL.
 
 ### Notes
-The jupyter notebook 'notebooks/basic_q_learning.ipynb' shows how to train a basic plume-navigating agent.
+The jupyter notebook `notebooks/basic_q_learning.ipynb` shows how to train a basic plume-navigating agent.
 It's a good place to start to see the methods of the environment class (based on openAI Gym environments).
 
 ### To Do
