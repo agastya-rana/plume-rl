@@ -122,4 +122,3 @@ class WalkDisplacements:
                 wind_directions_to_combine=[self.wind_params.wind_angle, self.wind_params.crosswind_b])
         }
         return walk_displacements
-

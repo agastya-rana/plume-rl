@@ -17,10 +17,17 @@ class FlySpatialParameters:
 
     orientation: float = AngleField()
     position: np.ndarray = np.array([0, 0])
+    integrator_origin: np.ndarray = np.array([0, 0])
+    home_vector: np.ndarray = np.array([0, 0])
 
     def update_position(self, walking_direction: np.ndarray) -> np.ndarray:
         self.position = self.position + walking_direction
+        self.home_vector = self.integrator_origin - self.position
         return self.position
+
+    def reset_integrator(self):
+        integrator_origin = self.position
+        self.home_vector = np.array([0, 0])
 
     def turn(self, turn_angle: float) -> float:
         self.orientation += turn_angle
@@ -58,6 +65,7 @@ class FlySpatialParameters:
                 high=y_bounds[1])
         random_position = np.array([random_x, random_y])
         self.position = random_position
+        self.reset_integrator()
         return self.position
 
     def randomize_orientation(self, rng: np.random.Generator = np.random.default_rng(12345)) -> float:
