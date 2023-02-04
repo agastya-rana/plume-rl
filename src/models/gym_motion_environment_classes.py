@@ -5,7 +5,7 @@ from gym import Env
 from gym.core import ObsType, ActType
 from gym.spaces import MultiDiscrete, Discrete
 
-from src.models.action_definitions import WalkActionEnum, WalkDisplacements
+from src.models.action_definitions import WalkStopActionEnum, WalkDisplacements
 from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.goals import GoalZone
 from src.models.integrator_senses import IntegratorSensor
@@ -98,7 +98,7 @@ class PlumeMotionNavigationEnvironment(Env):
         Return the next observation, the reward, a boolean indicating whether
         the trial is over, and a dictionary of any additional info that might be needed
         """
-        walk_action = WalkActionEnum(action)
+        walk_action = WalkStopActionEnum(action)
         walk_displacement = self.walk_functions[walk_action]
         self.current_trial_walk_displacement = walk_displacement  # This can be removed
         self.fly_spatial_parameters.update_position(walk_displacement)
@@ -242,7 +242,7 @@ class PlumeMotionPathIntegrationNavigationEnvironment(Env):
         walk_action, integrator_action = action
         if integrator_action == 1:
             self.fly_spatial_parameters.reset_integrator()
-        walk_action = WalkActionEnum(walk_action)
+        walk_action = WalkStopActionEnum(walk_action)
         walk_displacement = self.walk_functions[walk_action]
         self.current_trial_walk_displacement = walk_displacement  # This can be removed
         self.fly_spatial_parameters.update_position(walk_displacement)

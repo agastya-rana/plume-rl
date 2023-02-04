@@ -37,7 +37,7 @@ class PlumeMotionNavigationBaseEnvironmentFactory:
         self.wind_towards_south = WindDirections(wind_angle=-np.pi / 2)
         self.wind_towards_west = WindDirections(wind_angle=np.pi)
         self.wind_towards_north = WindDirections(wind_angle=np.pi / 2)
-        self.path_integrator = IntegratorSensor()
+        self.path_integrator = IntegratorSensor(home_angle=0)
 
 
 class PlumeMotionNavigationEnvironmentMoviePlume1NiragRewardFactory(

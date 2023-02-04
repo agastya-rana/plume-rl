@@ -1,5 +1,5 @@
 import pytest
 import pandas as pd
 
-from src.models.action_definitions import WalkActionEnum
+from src.models.action_definitions import WalkStopActionEnum
 

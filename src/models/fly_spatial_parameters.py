@@ -26,7 +26,7 @@ class FlySpatialParameters:
         return self.position
 
     def reset_integrator(self):
-        integrator_origin = self.position
+        self.integrator_origin = self.position
         self.home_vector = np.array([0, 0])
 
     def turn(self, turn_angle: float) -> float:
