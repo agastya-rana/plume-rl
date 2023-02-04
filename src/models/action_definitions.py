@@ -1,6 +1,6 @@
 import enum
 import functools
-from typing import Callable
+from typing import Callable, Protocol
 
 import numpy as np
 
@@ -75,7 +75,7 @@ class TurnFunctions:
 
 
 @enum.unique
-class WalkStopActionEnum(enum.Enum):
+class WalkActionEnum(enum.Enum):
     UPWIND = 0
     DOWNWIND = enum.auto()
     CROSS_A = enum.auto()
@@ -84,6 +84,11 @@ class WalkStopActionEnum(enum.Enum):
     UP_B = enum.auto()
     DOWN_A = enum.auto()
     DOWN_B = enum.auto()
+
+
+class DisplacementActionClass(Protocol):
+    def create_walk_displacements(self) -> dict[enum.Enum, np.array]:
+        pass
 
 
 class WalkDisplacements:
@@ -97,7 +102,7 @@ class WalkDisplacements:
         self.walk_speed = WALK_SPEED
         self.working_walk_angle = AngleField()
         self.wind_params: WindDirections = wind_params
-        self.walk_displacements: dict[WalkStopActionEnum, np.ndarray] = self.create_walk_displacements()
+        self.walk_displacements: dict[WalkActionEnum, np.ndarray] = self.create_walk_displacements()
 
     def displacement_from_angles(self, wind_directions_to_combine: list):
         self.working_walk_angle = angle_average(wind_directions_to_combine)
@@ -105,21 +110,21 @@ class WalkDisplacements:
 
     def create_walk_displacements(self):
         walk_displacements = {
-            WalkStopActionEnum.UPWIND: self.displacement_from_angles(
+            WalkActionEnum.UPWIND: self.displacement_from_angles(
                 wind_directions_to_combine=[self.wind_params.upwind]),
-            WalkStopActionEnum.DOWNWIND: self.displacement_from_angles(
+            WalkActionEnum.DOWNWIND: self.displacement_from_angles(
                 wind_directions_to_combine=[self.wind_params.wind_angle]),
-            WalkStopActionEnum.CROSS_A: self.displacement_from_angles(
+            WalkActionEnum.CROSS_A: self.displacement_from_angles(
                 wind_directions_to_combine=[self.wind_params.crosswind_a]),
-            WalkStopActionEnum.CROSS_B: self.displacement_from_angles(
+            WalkActionEnum.CROSS_B: self.displacement_from_angles(
                 wind_directions_to_combine=[self.wind_params.crosswind_b]),
-            WalkStopActionEnum.UP_A: self.displacement_from_angles(
+            WalkActionEnum.UP_A: self.displacement_from_angles(
                 wind_directions_to_combine=[self.wind_params.upwind, self.wind_params.crosswind_a]),
-            WalkStopActionEnum.UP_B: self.displacement_from_angles(
+            WalkActionEnum.UP_B: self.displacement_from_angles(
                 wind_directions_to_combine=[self.wind_params.upwind, self.wind_params.crosswind_b]),
-            WalkStopActionEnum.DOWN_A: self.displacement_from_angles(
+            WalkActionEnum.DOWN_A: self.displacement_from_angles(
                 wind_directions_to_combine=[self.wind_params.wind_angle, self.wind_params.crosswind_a]),
-            WalkStopActionEnum.DOWN_B: self.displacement_from_angles(
+            WalkActionEnum.DOWN_B: self.displacement_from_angles(
                 wind_directions_to_combine=[self.wind_params.wind_angle, self.wind_params.crosswind_b])
         }
         return walk_displacements
