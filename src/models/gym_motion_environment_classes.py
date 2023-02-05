@@ -107,6 +107,7 @@ class PlumeMotionNavigationEnvironment(Env):
         """
         walk_action = self.action_enum(action)
         walk_displacement = self.walk_functions[walk_action]
+
         self.current_trial_walk_displacement = walk_displacement  # This can be removed
         self.fly_spatial_parameters.update_position(walk_displacement)
         self.prior_frame = self.odor_plume.frame
@@ -116,13 +117,22 @@ class PlumeMotionNavigationEnvironment(Env):
                                   prior_odor_plume_frame=self.prior_frame)
         reward = self.reward
 
+
         if self.odor_plume.frame_number >= self.max_frames:
             done = True
         else:
             done = False
 
+        # add a punishment to discourage always walking upwind
+        if self.fly_spatial_parameters.position[0] < 0:
+            reward = -10
+            done = True
+
+
         if self.fly_spatial_parameters.distance(distance_from=self.odor_plume.source_location) <= self.source_radius:
             done = True
+
+
 
         # observation, reward, done, info
         return self.odor_features.discretize_features(), \

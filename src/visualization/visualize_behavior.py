@@ -1,18 +1,20 @@
 import numpy as np
 import os
 from src.models.motion_environment_factory import PlumeMotionNavigationEnvironmentMoviePlume1NiragRewardFactory, \
-    PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardFactory, PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardPathIntegratorFactory
+    PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardFactory, \
+    PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardPathIntegratorFactory, \
+    PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory
 from src.models.action_definitions import WalkStopActionEnum
 
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-
-def main(movie_path=os.path.join('src','data', 'plume_movies', 'intermittent_smoke.avi'),
+rng = np.random.default_rng(seed=1234)
+def main(movie_path=os.path.join('src', 'data', 'plume_movies', 'intermittent_smoke.avi'),
          q_table_path=os.path.join('trained_models', 'updated_q.npy'),
          savepath=os.path.join('result_images', 'q_walking_frames')):
-    environment = PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardPathIntegratorFactory(
-        movie_file_path=movie_path).plume_environment
+    environment = PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory(
+        movie_file_path=movie_path, actions=WalkStopActionEnum).plume_environment
 
     reset = True
 
@@ -37,11 +39,11 @@ def main(movie_path=os.path.join('src','data', 'plume_movies', 'intermittent_smo
         if explore:
             action = environment.action_space.sample()
         else:
-            action = np.argmax(q_table[tuple(observation)])
-            action = np.unravel_index(action,shape=environment.action_space.nvec)
+            best = np.argwhere(q_table[tuple(observation)] == np.amax(q_table[tuple(observation)]))
+            action = rng.choice(best)
+            #action = np.unravel_index(action, shape=environment.action_space.nvec)
 
-
-        action_enum = WalkStopActionEnum(action[0])
+        action_enum = WalkStopActionEnum(action)
         displacement = environment.walk_functions[action_enum]
         compress_concentration, compress_gradient, compress_motion_speed = environment.odor_features.discretize_features()
 
@@ -54,10 +56,11 @@ def main(movie_path=os.path.join('src','data', 'plume_movies', 'intermittent_smo
 
         new_observation, reward, done, odor_measures = environment.step(action)
         plt.scatter(environment.fly_spatial_parameters.position[0], environment.fly_spatial_parameters.position[1],
-                    marker='o',c='blue')
-        print(environment.fly_spatial_parameters.integrator_origin)
-        plt.scatter(environment.fly_spatial_parameters.integrator_origin[0],environment.fly_spatial_parameters.integrator_origin[1],
-                    marker='*',c='green')
+                    marker='o', c='blue')
+        #print(environment.fly_spatial_parameters.integrator_origin)
+        # plt.scatter(environment.fly_spatial_parameters.integrator_origin[0],
+        #             environment.fly_spatial_parameters.integrator_origin[1],
+        #             marker='*', c='green')
         frame_num_str = (str(environment.odor_plume.frame_number).zfill(4))
         frame_fn = frame_num_str + '.png'
         frame_path = os.path.join(savepath, frame_fn)

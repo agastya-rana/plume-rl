@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
 import numpy as np
-
-GOAL_RADIUS = 35
+GOAL_RADIUS = 25
 GOAL_Y = 450
 GOAL_X = 150
 
