@@ -127,6 +127,15 @@ class PlumeMotionNavigationEnvironment(Env):
         if self.fly_spatial_parameters.position[0] < 0:
             reward = -10
             done = True
+        elif self.fly_spatial_parameters.position[0] > 1500:
+            reward = -10
+            done = True
+        elif self.fly_spatial_parameters.position[1]<0:
+            reward = -10
+            done = True
+        elif self.fly_spatial_parameters.position[1] > 875:
+            reward = -10
+            done = True
 
 
         if self.fly_spatial_parameters.distance(distance_from=self.odor_plume.source_location) <= self.source_radius:
