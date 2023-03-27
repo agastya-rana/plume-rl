@@ -67,6 +67,7 @@ class PlumeMotionNavigationEnvironment(Env):
         Reinitialize the plume and the agent. Return the agent's initial observation.
         """
         rng: np.random.Generator = np.random.default_rng(seed)
+        # Step 1: get odor frame
         try:
             self.odor_plume.reset(flip=options['flip'])
         except TypeError:
@@ -76,6 +77,7 @@ class PlumeMotionNavigationEnvironment(Env):
         odor_on = self.odor_plume.frame > CONCENTRATION_THRESHOLD
         odor_on_indices = np.transpose(odor_on.nonzero())
 
+        # Step 2: Initialize fly position
         try:
             x_random_bounds = options['randomization_x_bounds']
             y_random_bounds = options['randomization_y_bounds']
@@ -92,6 +94,7 @@ class PlumeMotionNavigationEnvironment(Env):
 
         self.fly_spatial_parameters.randomize_orientation(rng=rng)
 
+        # Smell
         self.odor_features.clear()
         self.odor_features.update(sensor_location=self.fly_spatial_parameters.position,
                                   odor_plume_frame=self.odor_plume.frame,
@@ -105,18 +108,25 @@ class PlumeMotionNavigationEnvironment(Env):
         Return the next observation, the reward, a boolean indicating whether
         the trial is over, and a dictionary of any additional info that might be needed
         """
+        # Translate action level (i.e., integer denoting action) into a spatial displacement
         walk_action = self.action_enum(action)
         walk_displacement = self.walk_functions[walk_action]
 
         self.current_trial_walk_displacement = walk_displacement  # This can be removed
+
+        # Update fly position using calculated action displacement
         self.fly_spatial_parameters.update_position(walk_displacement)
+
+        # Advance odor plume
         self.prior_frame = self.odor_plume.frame
         self.odor_plume.advance()
+
+        # Sniff
         self.odor_features.update(sensor_location=self.fly_spatial_parameters.position,
                                   odor_plume_frame=self.odor_plume.frame,
                                   prior_odor_plume_frame=self.prior_frame)
-        reward = self.reward
 
+        reward = self.reward # this should be calculate_reward() method
 
         if self.odor_plume.frame_number >= self.max_frames:
             done = True
