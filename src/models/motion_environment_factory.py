@@ -8,9 +8,9 @@ from src.models.action_definitions import WalkStopActionEnum, WalkStopDisplaceme
     WalkDisplacements
 from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.gym_motion_environment_classes import PlumeMotionNavigationEnvironment, \
-    PlumeMotionPathIntegrationNavigationEnvironment
+    PlumeMotionPathIntegrationNavigationEnvironment, Plume_motion_knockout_NavigationEnvironment, Plume_gradient_knockout_NavigationEnvironment
 from src.models.integrator_senses import IntegratorSensor
-from src.models.odor_senses import OdorHistory, OdorFeatures
+from src.models.odor_senses import OdorHistory, OdorFeatures, OdorFeatures_no_gradient, OdorFeatures_no_motion
 from src.models.odor_plumes import OdorPlumeAllOnes, OdorPlumeAllZeros, OdorPlumeAlternating, OdorPlumeRollingRandom, \
     OdorPlumeFromMovie, MOVIE_PATH_1
 from src.models.reward_schemes import RewardSchemeEnum
@@ -49,6 +49,36 @@ class PlumeMotionNavigationBaseEnvironmentFactory:
         self.path_integrator = IntegratorSensor(home_angle=0)
         self.action_enum = action_enum
         self.action_class = action_class  # default runs original design
+
+
+class PlumeMotionNavigation_knockout_BaseEnvironmentFactory:
+    """
+    The specific factories inherit from this class, which contains info required for any of them.
+    This inheritance structure helped to get pytest to work, but it is cumbersome and should be changed...
+    Note that the action enum should be injected into the environmet here, but it's not structured that way yet.
+    """
+
+    def __init__(self, movie_file_path=None,
+                 action_enum: Union[Type[WalkActionEnum], Type[WalkStopActionEnum]] = WalkActionEnum,
+                 action_class: DisplacementActionClass = WalkDisplacements):
+        self.fly_spatial_parameters = FlySpatialParameters(orientation=0, position=np.array([0, 0]))
+        self.odor_features = OdorFeatures_no_motion()
+        self.odor_plume_all_ones = OdorPlumeAllOnes()
+        self.odor_plume_all_zeros = OdorPlumeAllZeros()
+        self.odor_plume_alternating = OdorPlumeAlternating()
+        self.odor_plume_rolling_random = OdorPlumeRollingRandom()
+        if movie_file_path is None:
+            self.odor_plume_movie1 = None
+        else:
+            self.odor_plume_movie1 = OdorPlumeFromMovie(movie_file_path=movie_file_path)
+        self.wind_towards_east = WindDirections()
+        self.wind_towards_south = WindDirections(wind_angle=-np.pi / 2)
+        self.wind_towards_west = WindDirections(wind_angle=np.pi)
+        self.wind_towards_north = WindDirections(wind_angle=np.pi / 2)
+        self.path_integrator = IntegratorSensor(home_angle=0)
+        self.action_enum = action_enum
+        self.action_class = action_class  # default runs original design
+
 
 
 class PlumeMotionNavigationEnvironmentMoviePlume1NiragRewardFactory(
@@ -186,3 +216,55 @@ class PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory(
                                                 action_enum=self.action_enum,
                                                 action_class=self.action_class
                                                 )
+
+class PlumeMotionNavigationEnvironment_motion_knockout_Movie1PlumeSourceRewardStopActionFactory(
+    PlumeMotionNavigation_knockout_BaseEnvironmentFactory):
+    """
+    This class has a property (plume environment) that is an instantiation of a parameterized motion plume
+    environment. The plume here uses a movie from Nirag, and rewards when the agent gets to the source.
+    """
+
+    def __init__(self, movie_file_path=MOVIE_PATH_1, actions=WalkStopActionEnum, action_class=WalkStopDisplacements):
+        super(PlumeMotionNavigationEnvironment_motion_knockout_Movie1PlumeSourceRewardStopActionFactory, self).__init__(
+            movie_file_path=movie_file_path,
+            action_enum=actions,
+            action_class=WalkStopDisplacements)
+
+    @property
+    def plume_environment(self) -> PlumeMotionNavigationEnvironment:
+        return Plume_motion_knockout_NavigationEnvironment(wind_directions=self.wind_towards_east,
+                                                fly_spatial_parameters=self.fly_spatial_parameters,
+                                                odor_features=OdorFeatures_no_motion(),
+                                                odor_plume=self.odor_plume_movie1,
+                                                reward_flag=RewardSchemeEnum.GOAL_ZONE,
+                                                source_radius=GOAL_RADIUS,
+                                                action_enum=self.action_enum,
+                                                action_class=self.action_class)
+
+
+
+
+class PlumeMotionNavigationEnvironment_gradient_knockout_Movie1PlumeSourceRewardStopActionFactory(
+    PlumeMotionNavigation_knockout_BaseEnvironmentFactory):
+    """
+    This class has a property (plume environment) that is an instantiation of a parameterized motion plume
+    environment. The plume here uses a movie from Nirag, and rewards when the agent gets to the source.
+    """
+
+    def __init__(self, movie_file_path=MOVIE_PATH_1, actions=WalkStopActionEnum, action_class=WalkStopDisplacements):
+        super(PlumeMotionNavigationEnvironment_gradient_knockout_Movie1PlumeSourceRewardStopActionFactory, self).__init__(
+            movie_file_path=movie_file_path,
+            action_enum=actions,
+            action_class=WalkStopDisplacements)
+
+    @property
+    def plume_environment(self) -> PlumeMotionNavigationEnvironment:
+        return Plume_gradient_knockout_NavigationEnvironment(wind_directions=self.wind_towards_east,
+                                                fly_spatial_parameters=self.fly_spatial_parameters,
+                                                odor_features=OdorFeatures_no_gradient(),
+                                                odor_plume=self.odor_plume_movie1,
+                                                reward_flag=RewardSchemeEnum.GOAL_ZONE,
+                                                source_radius=GOAL_RADIUS,
+                                                action_enum=self.action_enum,
+                                                action_class=self.action_class)
+

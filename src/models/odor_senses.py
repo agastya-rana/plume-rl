@@ -118,3 +118,66 @@ class OdorFeatures:
             motion_speed = 2
 
         return np.array([concentration, gradient, motion_speed])
+
+@dataclass
+class OdorFeatures_no_gradient:
+
+    concentration: float = 0
+    motion_speed: float = 0
+
+    def update(self, sensor_location: np.ndarray, odor_plume_frame: np.ndarray, prior_odor_plume_frame: np.ndarray):
+        self.concentration = detect_local_odor_concentration(fly_location=sensor_location,
+                                                             odor_plume=odor_plume_frame)
+        self.motion_speed = detect_local_odor_motion(fly_location=sensor_location,
+                                                     odor_frame_1=prior_odor_plume_frame,
+                                                     odor_frame_2=odor_plume_frame)
+
+        return self.motion_speed, self.concentration
+
+    def clear(self):
+        self.concentration = 0
+        self.motion_speed = 0
+        return self.motion_speed, self.concentration
+
+    def discretize_features(self):  # This should be factored somewhere else
+        concentration = int(self.concentration > CONCENTRATION_THRESHOLD)
+
+        if self.motion_speed == 0:
+            motion_speed = 0
+        elif self.motion_speed > 0:
+            motion_speed = 1
+        else:
+            motion_speed = 2
+
+        return np.array([concentration, motion_speed])
+
+@dataclass
+class OdorFeatures_no_motion:
+    concentration: float = 0
+    gradient: float = 0
+
+    def update(self, sensor_location: np.ndarray, odor_plume_frame: np.ndarray, prior_odor_plume_frame: np.ndarray):
+        self.concentration = detect_local_odor_concentration(fly_location=sensor_location,
+                                                             odor_plume=odor_plume_frame)
+
+        self.gradient = detect_local_odor_gradient(fly_location=sensor_location,
+                                                   odor_frame=odor_plume_frame)
+
+        return self.gradient, self.concentration
+
+    def clear(self):
+        self.concentration = 0
+        self.gradient = 0
+        return self.gradient, self.concentration
+
+    def discretize_features(self):  # This should be factored somewhere else
+        concentration = int(self.concentration > CONCENTRATION_THRESHOLD)
+        if self.gradient == 0:
+            gradient = 0
+        elif self.gradient > 0:
+            gradient = 1
+        else:
+            gradient = 2
+
+        return np.array([concentration, gradient])
+
