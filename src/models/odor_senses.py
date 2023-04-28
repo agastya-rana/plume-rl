@@ -255,18 +255,18 @@ class OdorFeatures_2D:
 
         self.concentration = detect_local_odor_concentration(fly_location=sensor_location, odor_plume=odor_plume_frame)
         self.gradient = detect_local_odor_gradient_2D(sensor_location, odor_plume_frame)
-        self.motion = detect_local_odor_motion_2D(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
+        self.motion_speed = detect_local_odor_motion_2D(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
 
-        return self.motion, self.gradient, self.concentration
+        return self.motion_speed, self.gradient, self.concentration
 
 
     def clear(self):
 
         self.concentration = 0
         self.gradient = np.zeros(2)
-        self.motion = np.zeros(2)
+        self.motion_speed = np.zeros(2)
 
-        return self.motion, self.gradient, self.concentration
+        return self.motion_speed, self.gradient, self.concentration
 
 
     def discretize_features(self):
@@ -289,18 +289,18 @@ class OdorFeatures_grad_2D:
 
         self.concentration = detect_local_odor_concentration(fly_location=sensor_location, odor_plume=odor_plume_frame)
         self.gradient = detect_local_odor_gradient_2D(sensor_location, odor_plume_frame)
-        self.motion = detect_local_odor_motion(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
+        self.motion_speed = detect_local_odor_motion(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
 
-        return self.motion, self.gradient, self.concentration
+        return self.motion_speed, self.gradient, self.concentration
 
 
     def clear(self):
 
         self.concentration = 0
         self.gradient = np.zeros(2)
-        self.motion = 0
+        self.motion_speed = 0
 
-        return self.motion, self.gradient, self.concentration
+        return self.motion_speed, self.gradient, self.concentration
 
 
     def discretize_features(self):
@@ -323,18 +323,18 @@ class OdorFeatures_motion_2D:
 
         self.concentration = detect_local_odor_concentration(fly_location=sensor_location, odor_plume=odor_plume_frame)
         self.gradient = detect_local_odor_gradient(sensor_location, odor_plume_frame)
-        self.motion = detect_local_odor_motion_2D(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
+        self.motion_speed = detect_local_odor_motion_2D(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
 
-        return self.motion, self.gradient, self.concentration
+        return self.motion_speed, self.gradient, self.concentration
 
 
     def clear(self):
 
         self.concentration = 0
         self.gradient = 0
-        self.motion = np.zeros(2)
+        self.motion_speed = np.zeros(2)
 
-        return self.motion_array, self.gradient, self.concentration
+        return self.motion_speed, self.gradient, self.concentration
 
 
     def discretize_features(self):
