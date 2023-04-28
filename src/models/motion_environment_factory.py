@@ -278,7 +278,7 @@ class ayelet_full_2D():
     """
 
     def __init__(self, movie_file_path=MOVIE_PATH_1, actions=WalkStopActionEnum, action_class=WalkStopDisplacements):
-        super(PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory, self).__init__(
+        super(ayelet_full_2D, self).__init__(
             movie_file_path=movie_file_path,
             action_enum=actions,
             action_class=WalkStopDisplacements)
@@ -300,7 +300,7 @@ class ayelet_grad_2D():
 
 
     def __init__(self, movie_file_path=MOVIE_PATH_1, actions=WalkStopActionEnum, action_class=WalkStopDisplacements):
-        super(PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory, self).__init__(
+        super(ayelet_grad_2D, self).__init__(
             movie_file_path=movie_file_path,
             action_enum=actions,
             action_class=WalkStopDisplacements)
@@ -322,7 +322,7 @@ class ayelet_motion_2D():
 
 
     def __init__(self, movie_file_path=MOVIE_PATH_1, actions=WalkStopActionEnum, action_class=WalkStopDisplacements):
-        super(PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory, self).__init__(
+        super(ayelet_motion_2D, self).__init__(
             movie_file_path=movie_file_path,
             action_enum=actions,
             action_class=WalkStopDisplacements)
