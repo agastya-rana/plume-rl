@@ -9,7 +9,6 @@ from gym.spaces import MultiDiscrete, Discrete
 from src.models.action_definitions import WalkStopActionEnum, WalkDisplacements, WalkActionEnum, DisplacementActionClass
 from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.goals import GoalZone
-#from src.models.integrator_senses import IntegratorSensor
 from src.models.odor_plumes import OdorMotionPlume, PLUME_VIDEO_X_BOUNDS, PLUME_VIDEO_Y_BOUNDS
 from src.models.odor_senses_gradient import OdorFeatures, CONCENTRATION_THRESHOLD
 from src.models.reward_schemes import RewardScheme, RewardSchemeEnum, \
@@ -44,7 +43,7 @@ class PlumeMotionNavigationEnvironment(Env):
         self.odor_features = odor_features
         self.odor_plume = odor_plume  # given as input
         self.reward_flag = reward_flag  # given as input, member of reward_enum tells how reward works
-        self.observation_space = MultiDiscrete([2, 3, 3])  # This should go in the factory?
+        self.observation_space = MultiDiscrete([2, 3, 3, 3])  # This should go in the factory?
         self.action_space = Discrete(len(action_enum))
         self.action_enum = action_enum
         self.action_class: DisplacementActionClass = action_class
@@ -185,5 +184,4 @@ class PlumeMotionNavigationEnvironment(Env):
         else:
             reward_scheme: RewardScheme = NiragRewardScheme(odor_features=self.odor_features)
         return reward_scheme.get_reward()
-
 
