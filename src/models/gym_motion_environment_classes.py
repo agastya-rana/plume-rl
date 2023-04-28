@@ -11,7 +11,7 @@ from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.goals import GoalZone
 from src.models.integrator_senses import IntegratorSensor
 from src.models.odor_plumes import OdorMotionPlume, PLUME_VIDEO_X_BOUNDS, PLUME_VIDEO_Y_BOUNDS
-from src.models.odor_senses import OdorFeatures, CONCENTRATION_THRESHOLD, OdorFeatures_no_gradient, OdorFeatures_no_motion
+from src.models.odor_senses import *
 from src.models.reward_schemes import RewardScheme, RewardSchemeEnum, \
     GoalZoneRewardScheme, SimpleOdorFeatureRewardScheme, NiragRewardScheme, YMaxRewardScheme
 from src.models.wind_directions import WindDirections
