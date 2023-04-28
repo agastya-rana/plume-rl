@@ -277,8 +277,8 @@ class OdorFeatures_2D:
         first_grad = thresh_quantity(self.gradient[0])
         second_grad = thresh_quantity(self.gradient[1])
 
-        first_mot = thresh_quantity(self.motion[0])
-        second_mot = thresh_quantity(self.motion[1])
+        first_mot = thresh_quantity(self.motion_speed[0])
+        second_mot = thresh_quantity(self.motion_speed[1])
 
         return np.array([concentration, first_grad, second_grad, first_mot, second_mot])
 
@@ -344,8 +344,8 @@ class OdorFeatures_motion_2D:
 
         grad = thresh_quantity(self.gradient)
 
-        first_mot = thresh_quantity(self.motion[0])
-        second_mot = thresh_quantity(self.motion[1])
+        first_mot = thresh_quantity(self.motion_speed[0])
+        second_mot = thresh_quantity(self.motion_speed[1])
 
         return np.array([concentration, grad, first_mot, second_mot])
 
