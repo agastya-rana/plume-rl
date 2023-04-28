@@ -30,11 +30,11 @@ class PlumeMotionNavigationBaseEnvironmentFactory:
     Note that the action enum should be injected into the environmet here, but it's not structured that way yet.
     """
 
-    def __init__(self, movie_file_path=None,
+    def __init__(self, movie_file_path=None, odor_features,
                  action_enum: Union[Type[WalkActionEnum], Type[WalkStopActionEnum]] = WalkActionEnum,
                  action_class: DisplacementActionClass = WalkDisplacements):
         self.fly_spatial_parameters = FlySpatialParameters(orientation=0, position=np.array([0, 0]))
-        self.odor_features = OdorFeatures()
+        self.odor_features = odor_features()
         self.odor_plume_all_ones = OdorPlumeAllOnes()
         self.odor_plume_all_zeros = OdorPlumeAllZeros()
         self.odor_plume_alternating = OdorPlumeAlternating()
@@ -271,7 +271,7 @@ class PlumeMotionNavigationEnvironment_gradient_knockout_Movie1PlumeSourceReward
 
 
 
-class ayelet_full_2D():
+class ayelet_full_2D(PlumeMotionNavigationBaseEnvironmentFactory):
     """
     This class has a property (plume environment) that is an instantiation of a parameterized motion plume
     environment. The plume here uses a movie from Nirag, and rewards when the agent gets to the source.
@@ -295,7 +295,7 @@ class ayelet_full_2D():
                                                 action_class=self.action_class)
 
 
-class ayelet_grad_2D():
+class ayelet_grad_2D(PlumeMotionNavigationBaseEnvironmentFactory):
 
 
 
@@ -317,7 +317,7 @@ class ayelet_grad_2D():
                                                 action_class=self.action_class)
 
 
-class ayelet_motion_2D():
+class ayelet_motion_2D(PlumeMotionNavigationBaseEnvironmentFactory):
 
 
 
