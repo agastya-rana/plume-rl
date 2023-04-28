@@ -10,7 +10,8 @@ from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.gym_motion_environment_classes import PlumeMotionNavigationEnvironment, \
     PlumeMotionPathIntegrationNavigationEnvironment, Plume_motion_knockout_NavigationEnvironment, Plume_gradient_knockout_NavigationEnvironment
 from src.models.integrator_senses import IntegratorSensor
-from src.models.odor_senses import OdorHistory, OdorFeatures, OdorFeatures_no_gradient, OdorFeatures_no_motion
+from src.models.odor_senses import OdorHistory, OdorFeatures, OdorFeatures_no_gradient, OdorFeatures_no_motion, OdorFeatures_2D, OdorFeatures_grad_2D, OdorFeature_motion_2D
+
 from src.models.odor_plumes import OdorPlumeAllOnes, OdorPlumeAllZeros, OdorPlumeAlternating, OdorPlumeRollingRandom, \
     OdorPlumeFromMovie, MOVIE_PATH_1
 from src.models.reward_schemes import RewardSchemeEnum
@@ -268,3 +269,71 @@ class PlumeMotionNavigationEnvironment_gradient_knockout_Movie1PlumeSourceReward
                                                 action_enum=self.action_enum,
                                                 action_class=self.action_class)
 
+
+
+class ayelet_full_2D():
+    """
+    This class has a property (plume environment) that is an instantiation of a parameterized motion plume
+    environment. The plume here uses a movie from Nirag, and rewards when the agent gets to the source.
+    """
+
+    def __init__(self, movie_file_path=MOVIE_PATH_1, actions=WalkStopActionEnum, action_class=WalkStopDisplacements):
+        super(PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory, self).__init__(
+            movie_file_path=movie_file_path,
+            action_enum=actions,
+            action_class=WalkStopDisplacements)
+
+    @property
+    def plume_environment(self) -> PlumeMotionNavigationEnvironment:
+        return PlumeNavigationEnvironment_2D(wind_directions=self.wind_towards_east,
+                                                fly_spatial_parameters=self.fly_spatial_parameters,
+                                                odor_features=OdorFeatures_2D(),
+                                                odor_plume=self.odor_plume_movie1,
+                                                reward_flag=RewardSchemeEnum.GOAL_ZONE,
+                                                source_radius=GOAL_RADIUS,
+                                                action_enum=self.action_enum,
+                                                action_class=self.action_class)
+
+
+class ayelet_grad_2D():
+
+
+
+    def __init__(self, movie_file_path=MOVIE_PATH_1, actions=WalkStopActionEnum, action_class=WalkStopDisplacements):
+        super(PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory, self).__init__(
+            movie_file_path=movie_file_path,
+            action_enum=actions,
+            action_class=WalkStopDisplacements)
+
+    @property
+    def plume_environment(self) -> PlumeMotionNavigationEnvironment:
+        return PlumeNavigationEnvironment_half_2D(wind_directions=self.wind_towards_east,
+                                                fly_spatial_parameters=self.fly_spatial_parameters,
+                                                odor_features=OdorFeatures_grad_2D(),
+                                                odor_plume=self.odor_plume_movie1,
+                                                reward_flag=RewardSchemeEnum.GOAL_ZONE,
+                                                source_radius=GOAL_RADIUS,
+                                                action_enum=self.action_enum,
+                                                action_class=self.action_class)
+
+
+class ayelet_motion_2D():
+
+
+
+    def __init__(self, movie_file_path=MOVIE_PATH_1, actions=WalkStopActionEnum, action_class=WalkStopDisplacements):
+        super(PlumeMotionNavigationEnvironmentMovie1PlumeSourceRewardStopActionFactory, self).__init__(
+            movie_file_path=movie_file_path,
+            action_enum=actions,
+            action_class=WalkStopDisplacements)
+
+    @property
+    def plume_environment(self) -> PlumeMotionNavigationEnvironment:
+        return PlumeNavigationEnvironment_half_2D(wind_directions=self.wind_towards_east,
+                                                fly_spatial_parameters=self.fly_spatial_parameters,
+                                                odor_features=OdorFeatures_motion_2D(),
+                                                odor_plume=self.odor_plume_movie1,
+                                                reward_flag=RewardSchemeEnum.GOAL_ZONE,
+                                                source_radius=GOAL_RADIUS,
+                                                action_enum=self.action_enum,
+                                                action_class=self.action_class)
