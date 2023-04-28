@@ -30,7 +30,7 @@ class PlumeMotionNavigationBaseEnvironmentFactory:
     Note that the action enum should be injected into the environmet here, but it's not structured that way yet.
     """
 
-    def __init__(self, movie_file_path=None, odor_features,
+    def __init__(self, movie_file_path=None,
                  action_enum: Union[Type[WalkActionEnum], Type[WalkStopActionEnum]] = WalkActionEnum,
                  action_class: DisplacementActionClass = WalkDisplacements):
         self.fly_spatial_parameters = FlySpatialParameters(orientation=0, position=np.array([0, 0]))
