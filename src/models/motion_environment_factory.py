@@ -10,7 +10,7 @@ from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.gym_motion_environment_classes import PlumeMotionNavigationEnvironment, \
     PlumeMotionPathIntegrationNavigationEnvironment, Plume_motion_knockout_NavigationEnvironment, Plume_gradient_knockout_NavigationEnvironment
 from src.models.integrator_senses import IntegratorSensor
-from src.models.odor_senses import OdorHistory, OdorFeatures, OdorFeatures_no_gradient, OdorFeatures_no_motion, OdorFeatures_2D, OdorFeatures_grad_2D, OdorFeature_motion_2D
+from src.models.odor_senses import OdorHistory, OdorFeatures, OdorFeatures_no_gradient, OdorFeatures_no_motion, OdorFeatures_2D, OdorFeatures_grad_2D, OdorFeatures_motion_2D
 
 from src.models.odor_plumes import OdorPlumeAllOnes, OdorPlumeAllZeros, OdorPlumeAlternating, OdorPlumeRollingRandom, \
     OdorPlumeFromMovie, MOVIE_PATH_1
