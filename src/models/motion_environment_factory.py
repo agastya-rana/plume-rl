@@ -34,7 +34,7 @@ class PlumeMotionNavigationBaseEnvironmentFactory:
                  action_enum: Union[Type[WalkActionEnum], Type[WalkStopActionEnum]] = WalkActionEnum,
                  action_class: DisplacementActionClass = WalkDisplacements):
         self.fly_spatial_parameters = FlySpatialParameters(orientation=0, position=np.array([0, 0]))
-        self.odor_features = odor_features()
+        self.odor_features = OdorFeatures()
         self.odor_plume_all_ones = OdorPlumeAllOnes()
         self.odor_plume_all_zeros = OdorPlumeAllZeros()
         self.odor_plume_alternating = OdorPlumeAlternating()
