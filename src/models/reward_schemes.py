@@ -2,7 +2,7 @@ import enum
 from typing import Protocol, Any
 
 from src.models.goals import GoalZone
-from src.models.odor_senses import OdorHistory, OdorFeatures
+from src.models.odor_senses import *
 
 ODOR_REWARD_THRESHOLD = 100  # from Nirag
 
@@ -15,12 +15,12 @@ class RewardSchemeEnum(enum.IntEnum):
     GOAL_ZONE = enum.auto()
     Y_MAX = enum.auto()
 
-
+"""
 class RewardScheme(Protocol):
 
     def get_reward(self, **kwargs: Any) -> float:
         pass
-
+"""
 
 class GoalZoneRewardScheme:
 
@@ -34,7 +34,7 @@ class GoalZoneRewardScheme:
         else:
             return 0
 
-
+"""
 class NiragRewardScheme:
 
     def __init__(self, odor_features: OdorFeatures):
@@ -64,13 +64,14 @@ class SimpleOdorFeatureRewardScheme:
 
 
 class YMaxRewardScheme:
-    """
-    This class gives reward for increasing the y coordinate. Useful for testing/debugging because the expected
-    behavior after training is clear
-    """
+    
+    #This class gives reward for increasing the y coordinate. Useful for testing/debugging because the expected
+    #behavior after training is clear
+    
 
     def __init__(self, y_displacement: float):
         self.y_displacement = y_displacement
 
     def get_reward(self) -> float:
         return self.y_displacement
+"""
