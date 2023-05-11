@@ -8,7 +8,7 @@ from src.models.geometry import AngleField
 from src.models.wind_directions import WindDirections
 from src.models.geometry import standardize_angle
 
-WALK_SPEED = 5
+#WALK_SPEED = 5
 
 
 def angle_average(angle_list: list):
@@ -99,7 +99,6 @@ class WalkDisplacements:
     """
 
     def __init__(self, wind_params: WindDirections):
-        self.walk_speed = WALK_SPEED
         self.working_walk_angle = AngleField()
         self.wind_params: WindDirections = wind_params
         self.walk_displacements: dict[WalkActionEnum, np.ndarray] = self.create_walk_displacements()
@@ -150,15 +149,16 @@ class WalkStopDisplacements:
     to current fly position in order to satisfy the meaning of 'walking_upwind,' e.g.
     """
 
-    def __init__(self, wind_params: WindDirections):
-        self.walk_speed = WALK_SPEED
+    def __init__(self, config, wind_params: WindDirections):
+        self.walk_speed = config['WALK_SPEED_MM_PER_S']
+        self.dt = config['DELTA_T_S']
         self.working_walk_angle = AngleField()
         self.wind_params: WindDirections = wind_params
         self.walk_displacements: dict[WalkStopActionEnum, np.ndarray] = self.create_walk_displacements()
 
     def displacement_from_angles(self, wind_directions_to_combine: list):
         self.working_walk_angle = angle_average(wind_directions_to_combine)
-        return self.walk_speed * np.array([np.cos(self.working_walk_angle), np.sin(self.working_walk_angle)])
+        return self.walk_speed*self.dt* np.array([np.cos(self.working_walk_angle), np.sin(self.working_walk_angle)])
 
     def create_walk_displacements(self):
         walk_displacements = {

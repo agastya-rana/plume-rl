@@ -4,8 +4,8 @@ import numpy as np
 
 from src.models.geometry import AngleField, angle_to_unit_vector
 
-X_RANDOMIZATION_BOUNDS = np.array([1000, 1200])
-Y_RANDOMIZATION_BOUNDS = np.array([310, 590])
+#X_RANDOMIZATION_BOUNDS = np.array([1000, 1200])
+#Y_RANDOMIZATION_BOUNDS = np.array([310, 590])
 
 
 @dataclass
@@ -15,15 +15,19 @@ class FlySpatialParameters:
     and methods to update this information when the fly turns and walks
     """
 
+    config: dict
     orientation: float = AngleField()
     position: np.ndarray = np.array([0, 0])
     integrator_origin: np.ndarray = np.array([0, 0])
-    home_vector: np.ndarray = np.array([0, 0])
+    home_vector: np.ndarray = np.array([0, 0])    
 
     def update_position(self, walking_direction: np.ndarray) -> np.ndarray:
         self.position = self.position + walking_direction
+
+
+    def update_home_vector(self):
         self.home_vector = self.integrator_origin - self.position
-        return self.position
+        return self.home_vector
 
     def reset_integrator(self):
         self.integrator_origin = self.position
@@ -39,9 +43,9 @@ class FlySpatialParameters:
         self.update_position(walking_direction)
         return self.position
 
-    def randomize_position(self, rng: np.random.Generator = np.random.default_rng(12345),
-                           x_bounds: np.ndarray = X_RANDOMIZATION_BOUNDS,
-                           y_bounds: np.ndarray = Y_RANDOMIZATION_BOUNDS,
+    def randomize_position(self, rng,
+                           x_bounds,
+                           y_bounds,
                            valid_locations: np.ndarray = None) -> np.ndarray:
         if valid_locations is not None:
             x_too_high = valid_locations[:, 0] > x_bounds[1]
@@ -68,10 +72,12 @@ class FlySpatialParameters:
         self.reset_integrator()
         return self.position
 
-    def randomize_orientation(self, rng: np.random.Generator = np.random.default_rng(12345)) -> float:
-        self.orientation = rng.uniform(
-            low=0,
-            high=2 * np.pi)
+    def randomize_orientation(self, config, rng) -> float:
+
+        theta_min = config['INIT_THETA_MIN']
+        theta_max = config['INIT_THETA_MAX']
+
+        self.orientation = rng.uniform(low, high)
         return self.orientation
 
     def distance(self, distance_from: np.ndarray) -> bool:
