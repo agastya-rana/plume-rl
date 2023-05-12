@@ -4,7 +4,7 @@ from src.packet_environment import packets
 import sys
 import matplotlib.pyplot as plt 
 
-num_flies = 1000
+num_flies = 100
 R_max = 300
 pos_theta_min = -np.arctan(1/4)
 pos_theta_max = np.arctan(1/4)
@@ -101,7 +101,7 @@ def get_rect_antenna(left_std_box, right_std_box, pos, theta):
 
 	pos_arr = np.tile(pos, (num_pts,1))
 
-	print(pos_arr)
+	#print(pos_arr)
 
 	left_pts = left_pts + pos_arr
 	right_pts = right_pts + pos_arr
@@ -240,7 +240,7 @@ for i in range(0,adaptive_steps):
 
 		pos = np.array([all_x[j], all_y[j]])
 
-		left_pts, right_pts = get_rect_antenna(left_std_box = left_std_box, right_std_box = right_std_box, pos = pos, theta = all_fly_theta[j])                
+		left_pts, right_pts = get_rect_antenna(left_std_box = left_box, right_std_box = right_box, pos = pos, theta = all_fly_theta[j])                
 
 		odor_L[j], odor_R[j] = env.compute_sig(left_points = left_pts, right_points = right_pts, packet_pos = packet_pos, 
 		  packet_sizes = packet_sizes, rand_gen = rand_gen)
@@ -269,11 +269,13 @@ all_inst_tt = np.zeros(num_flies)
 
 odor_filt = 0
 grad_filt = 0
-motion_filt = 0
+mot_filt = 0
 
 tau = 1
 
-filter_all == True
+filter_all = True
+
+print("starting collection")
 
 for i in range(0,num_steps):
 	
@@ -289,7 +291,7 @@ for i in range(0,num_steps):
 
 		pos = np.array([all_x[j], all_y[j]])
 
-		left_pts, right_pts = get_rect_antenna(left_std_box = left_std_box, right_std_box = right_std_box, pos = pos, theta = all_fly_theta[j])                
+		left_pts, right_pts = get_rect_antenna(left_std_box = left_box, right_std_box = right_box, pos = pos, theta = all_fly_theta[j])                
 
 		odor_L[j], odor_R[j] = env.compute_sig(left_points = left_pts, right_points = right_pts, packet_pos = packet_pos, 
 		  packet_sizes = packet_sizes, rand_gen = rand_gen)             
