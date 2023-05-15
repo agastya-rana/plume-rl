@@ -150,16 +150,16 @@ class PlumeMotionNavigationEnvironment(Env):
             done = False
 
         # add a punishment to discourage always walking upwind
-        if self.fly_spatial_parameters.position[0] < 0:
+        if self.fly_spatial_parameters.position[0] < self.config['WALL_MIN_X_MM']:
             reward = -10
             done = True
-        elif self.fly_spatial_parameters.position[0] > 1500:
+        elif self.fly_spatial_parameters.position[0] > self.config['WALL_MAX_X_MM']:
             reward = -10
             done = True
-        elif self.fly_spatial_parameters.position[1]<0:
+        elif self.fly_spatial_parameters.position[1]<self.config['WALL_MIN_Y_MM']:
             reward = -10
             done = True
-        elif self.fly_spatial_parameters.position[1] > 875:
+        elif self.fly_spatial_parameters.position[1] > self.config['WALL_MAX_Y_MM']:
             reward = -10
             done = True
 
