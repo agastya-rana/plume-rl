@@ -84,10 +84,14 @@ recent_rewards = deque(maxlen=50)
 all_reward = np.zeros(200)
 all_ep_time = np.zeros(200)
 
+all_x = np.zeros((200,4500))
+all_y = np.zeros((200,4500))
+
 for episode in range(config_dict['N_EPISODES']):
 
-    print('starting episode')
+    #print('starting episode')
     #print('latest verion')
+
 
     flip = environment.rng.choice([True,False],1)
     observation = environment.reset(options={'randomization_x_bounds':np.array([min_reset_x,max_reset_x]),
@@ -98,6 +102,10 @@ for episode in range(config_dict['N_EPISODES']):
     done = False
  
     ep_time = 0
+
+    all_x[episode,0] = environment.fly_spatial_parameters.position[0]
+    all_y[episode,0] = environment.fly_spatial_parameters.position[1]
+
     while not done: # Advance the environment (e.g., the smoke plume updates and the agent walks a step)
         explore = environment.rng.uniform() < epsilon# Can pick all random numbers at start
         if explore:
@@ -131,6 +139,9 @@ for episode in range(config_dict['N_EPISODES']):
 
         ep_time +=1
 
+        all_x[episode,ep_time] = environment.fly_spatial_parameters.position[0]
+        all_y[episode,ep_time] = environment.fly_spatial_parameters.position[1]
+
     recent_rewards.append(reward)
     transition_incrementer += 1
 
@@ -141,4 +152,6 @@ for episode in range(config_dict['N_EPISODES']):
     
 np.save(str(seed)+"_all_reward", all_reward)
 np.save(str(seed)+"_all_ep_time", all_ep_time)
+np.save(str(seed)+"_all_x", all_x)
+np.save(str(seed)+"_all_y", all_y)
 
