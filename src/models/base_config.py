@@ -31,7 +31,11 @@ config_dict = {
     "MIN_RESET_X_MM": 55, # Initialization condition-minimum agent x in mm
     "MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
     "MIN_RESET_Y_MM": 0,
-    "MAX_RESET_Y_MM":180,
+    "MAX_RESET_Y_MM": 180,
+    "WALL_MIN_X_MM": 0,
+    "WALL_MAX_X_MM": 300,
+    "WALL_MIN_Y_MM": 0,
+    "WALL_MAX_Y_MM": 175,
     "SOURCE_LOC_MM": np.array([30,90]), #Source location in mm
     "INIT_THETA_MIN": 0,
     "INIT_THETA_MAX": 2*np.pi,
