@@ -2,14 +2,18 @@ import torch
 from torch import nn
 from torch.nn.utils import weight_norm
 import torch.nn.functional as F
+from rnn_baseline import *
+
 ## Goal here is to construct a VAE that takes as input a set of odor statistics, and a history,
 ## We use a TCN to encode temporal embeddings; then, we use a VAE on the output space to create our latent space.
 ## TCN architecture explained in https://arxiv.org/pdf/1803.01271.pdf
 
+## Instead of using TCNs and learning the latent space, we can simply take each odor measurement (for example a 3 element vector at each timestep)
+## and send it to a multi-head set of perceptrons that are all each only connected to one type of odor measurement
+## Then, we can treat these perceptrons as the latent space, learn the 'filters' (weights of each perceptron), and then see how they work
 
 num_stats = 3 ## Concentration, motion, gradient
 history_dep = 0 ## number of timesteps of history incorporated
-
 input_dim = num_stats*(history_dep + 1)
 filter_len = 5
 hidden_layers = 3
@@ -82,10 +86,10 @@ class TCN(nn.Module):
         return y
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, hidden_size, latent_size, num_layers):
+    def __init__(self, input_size, hidden_size, latent_size, num_layers, n_TCN_layer=5, kernel_size=5, dropout=0.2):
         super(Encoder, self).__init__()
         self.num_layers = num_layers
-        self.fc_layers = nn.ModuleList([nn.Linear(input_size, hidden_size)])
+        self.fc_layers = nn.ModuleList([TCN(input_size, hidden_size, [hidden_size]*n_TCN_layer, kernel_size=kernel_size, dropout=dropout)])
         self.fc_layers.extend([nn.Linear(hidden_size, hidden_size) for _ in range(num_layers - 1)])
         self.fc_mu = nn.Linear(hidden_size, latent_size)
         self.fc_logvar = nn.Linear(hidden_size, latent_size)
@@ -97,9 +101,7 @@ class Encoder(nn.Module):
         logvar = self.fc_logvar(x)
         return mu, logvar
 
-
-## Need to change my decoder and loss function to output the policy; train it on the optimal policy chosen by the
-## RNN actor-critic structure
+## Train it on the optimal policy chosen by the RNN actor-critic structure
 
 class Decoder(nn.Module):
     def __init__(self, latent_size, hidden_size, output_size, num_layers):
@@ -107,12 +109,11 @@ class Decoder(nn.Module):
         self.num_layers = num_layers
         self.fc_layers = nn.ModuleList([nn.Linear(latent_size, hidden_size)])
         self.fc_layers.extend([nn.Linear(hidden_size, hidden_size) for _ in range(num_layers - 1)])
-        self.fc_out = nn.Linear(hidden_size, output_size)
-
+        self.fc_out = nn.Softmax()
     def forward(self, x):
         for layer in self.fc_layers:
             x = F.relu(layer(x))
-        x = torch.sigmoid(self.fc_out(x))
+        x = self.fc_out(x)
         return x
 
 
@@ -121,6 +122,7 @@ class VAE(nn.Module):
         super(VAE, self).__init__()
         self.encoder = Encoder(input_size, hidden_size, latent_size, num_layers_encoder)
         self.decoder = Decoder(latent_size, hidden_size, input_size, num_layers_decoder)
+        self.kl_loss = nn.KLDivLoss(reduction="batchmean")
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -134,24 +136,19 @@ class VAE(nn.Module):
         reconstructed = self.decoder(z)
         return reconstructed, mu, logvar
 
+def VAE_loss_function(reconstructed, x, mu, logvar):
+    # Reconstruction loss (KL-divergence between expected action probs and optimal RNN policy)
+    reconstruction_loss = kl_loss(reconstructed, policy_probs())
+    # Kullback-Leibler (KL) divergence loss
+    kl_divergence_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    # Total loss
+    loss = reconstruction_loss + kl_divergence_loss
+    return loss
 
 # Example usage
 input_size = 32
 hidden_size = 64
 latent_size = 10
-num_layers_encoder = 2
-num_layers_decoder = 2
-
-# Instantiate the VAE model
-vae = VAE(input_size, hidden_size, latent_size, num_layers_encoder, num_layers_decoder)
-
-# Generate some random input data
-input_data = torch.randn(16, input_size)  # Batch size of 16
-
-# Example usage
-input_size = 32
-hidden_size = 64
-latent_size = 5
 
 # Instantiate the VAE model
 vae = VAE(input_size, hidden_size, latent_size)
@@ -162,5 +159,35 @@ input_data = torch.randn(16, input_size)  # Batch size of 16
 # Forward pass through the VAE
 reconstructed_data, mu, logvar = vae(input_data)
 
-# Compute loss and perform backpropagation for training
-# ... (code for loss calculation and backpropagation)
+# Compute the loss
+loss = loss_function(reconstructed_data, input_data, mu, logvar)
+
+# Perform backpropagation
+optimizer = torch.optim.Adam(vae.parameters(), lr=0.001)
+optimizer.zero_grad()
+loss.backward()
+optimizer.step()
+
+
+
+# Example usage
+input_size = 32
+hidden_size = 64
+latent_size = 10
+num_layers_encoder = 2
+num_layers_decoder = 2
+# Instantiate the VAE model
+vae = VAE(input_size, hidden_size, latent_size, num_layers_encoder, num_layers_decoder)
+# Generate some random input data
+input_data = torch.randn(16, input_size)  # Batch size of 16
+# Example usage
+input_size = 32
+hidden_size = 64
+latent_size = 5
+# Instantiate the VAE model
+vae = VAE(input_size, hidden_size, latent_size)
+# Generate some random input data
+input_data = torch.randn(16, input_size)  # Batch size of 16
+# Forward pass through the VAE
+reconstructed_data, mu, logvar = vae(input_data)
+

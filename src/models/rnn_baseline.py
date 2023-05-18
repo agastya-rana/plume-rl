@@ -1,5 +1,5 @@
-## Here, we train an RNN to compute the optimal policy using Actor-Critic architecture along with PPO to train
-## We follow loosely Brunton paper, although code is generated ourselves (maybe)
+## Here, we train an RNN to compute the optimal policy using Actor-Critic architecture along with PPO to train, analogous to Brunton paper
+## We use stable_baselines3 here instead of the from-scratch code in https://arxiv.org/pdf/2109.12434.pdf
 
 import torch
 from torch import nn
@@ -48,14 +48,15 @@ class CustomActorCriticPolicy(BasePolicy):
         # Override the features extractor with our custom RNN
         self.features_extractor = RNNFeaturesExtractor(observation_space)
 
-register_policy("CustomActorCriticPolicy", CustomActorCriticPolicy)
 
-# Use your environment's observation and action space instead of 'CartPole-v1'
-env = gym.make('CartPole-v1')
+def define_model(env, actor_layers=[128, 128, 128], critic_layers=[128, 128, 128]):
+    register_policy("CustomActorCriticPolicy", CustomActorCriticPolicy)
+    model = PPO("CustomActorCriticPolicy", env, verbose=1, policy_kwargs={"net_arch": [dict(pi=actor_layers, vf=critic_layers)]})
+    return model
 
-model = PPO(
-    "CustomActorCriticPolicy", 
-    env, 
-    verbose=1,
-    policy_kwargs={"net_arch": [dict(pi=[128, 128, 128], vf=[128, 128, 128])]},  # Custom architecture for actor/critic networks
-)
+def policy_probs(model, state):
+    obs = obs_as_tensor(state, model.policy.device)
+    dis = model.policy.get_distribution(obs)
+    probs = dis.distribution.probs
+    probs_np = probs.detach().numpy()
+    return probs_np
