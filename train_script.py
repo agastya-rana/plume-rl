@@ -1,6 +1,7 @@
 from src.models.gym_environment_class import FlyNavigator
 #from stable_baselines3.deepq.policies import MlpPolicy
 from stable_baselines3 import DQN
+from stable_baselines3.common.schedules import linear_schedule
 
 import numpy as np 
 #from stable_baselines3 import DQN
@@ -34,13 +35,12 @@ config_dict = {
 	"SOURCE_LOCATION_MM": np.array([30,90]),
 	"GOAL_RADIUS_MM": 10, #success radius in mm
 	"N_EPISODES" : 2000, # How many independently initialized runs to train on
-    "MAX_ALPHA": 0.2, # Learning rate
-    "MIN_ALPHA": 0.005,
+    "MAX_ALPHA": 0.1, # Learning rate
+    "MIN_ALPHA": 0.0001,
     "GAMMA":0.95, # Reward temporal discount factor
-    "MAX_EPSILON":1, # Starting exploration rate
     "MIN_EPSILON":0.01, # Asymptote of decaying exploration rate
-    "DECAY":0.05, # Rate of exploration decay per episode
-    "MIN_RESET_X_MM": 42, # Initialization condition-minimum agent x in mm
+    "MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
+    "INITIAL_MAX_RESET_X_MM": 45,
     "MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
     "MIN_RESET_Y_MM": 0,
     "MAX_RESET_Y_MM": 180,
@@ -54,15 +54,17 @@ config_dict = {
     "TURN_ANG_SPEED_RAD_PER_S": 100*np.pi/180,
     "MIN_TURN_DUR_S": 0.18,
     "EXCESS_TURN_DUR_S": 0.18,
-    "SHIFT_EPISODES": 150
+    "SHIFT_EPISODES": 100,
+    "RESET_X_SHIFT_MM": 5
 
 }
 
 seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
 plume_movie_path = os.path.join('..','src', 'data', 'plume_movies', 'intermittent_smoke.avi')
+
 config_dict['MOVIE_PATH'] = plume_movie_path
-config_dict['N_EPISODES'] = 2000
+config_dict['N_EPISODES'] = 10000
 
 environment = FlyNavigator(rng = rng, config = config_dict)
 
@@ -71,8 +73,10 @@ num_steps = config_dict['STOP_FRAME']*config_dict['N_EPISODES']
 models_dir = 'models'
 logdir = 'logs'
 
+learning_rate = linear_schedule(num_steps, config_dict['MAX_ALPHA'], config_dict['MIN_ALPHA'])
+
 model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=logdir, gamma = config_dict['GAMMA'], 
-	exploration_final_eps = config_dict['MIN_EPSILON'], seed = seed)
+	exploration_final_eps = config_dict['MIN_EPSILON'], seed = seed, learning_rate=learning_rate)
 
 #make these directories
 
