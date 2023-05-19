@@ -20,7 +20,6 @@ def epsilon_greedy_action(policy_probs, epsilon):
         # Greedy action
         return np.argmax(policy_probs)
 
-## Change the above function to save the VAE_input, VAE_output as numpyarray, and ensure they are nsteps = 100000 long each
 def get_training_data(gym_env, RNN_model, hist_len, num_actions, epsilon, epochs, nsteps=100000):
     ## Note that the hist_len is the number of timesteps including the current timestep in the history
     VAE_input = np.zeros_like((nsteps, hist_len * gym_env.observation_space.shape[0]))
