@@ -1,7 +1,7 @@
 from src.models.gym_environment_class import FlyNavigator
 #from stable_baselines3.deepq.policies import MlpPolicy
 from stable_baselines3 import DQN
-from stable_baselines3.common.schedules import linear_schedule
+from stable_baselines3.common.schedules import LinearSchedule
 
 import numpy as np 
 #from stable_baselines3 import DQN
@@ -73,7 +73,7 @@ num_steps = config_dict['STOP_FRAME']*config_dict['N_EPISODES']
 models_dir = 'models'
 logdir = 'logs'
 
-learning_rate = linear_schedule(num_steps, config_dict['MAX_ALPHA'], config_dict['MIN_ALPHA'])
+learning_rate = LinearSchedule(num_steps, config_dict['MAX_ALPHA'], config_dict['MIN_ALPHA'])
 
 model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=logdir, gamma = config_dict['GAMMA'], 
 	exploration_final_eps = config_dict['MIN_EPSILON'], seed = seed, learning_rate=learning_rate)
