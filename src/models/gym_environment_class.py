@@ -122,7 +122,7 @@ class FlyNavigator(Env):
 			for i in range(0,num_steps):
 
 				self.odor_plume.advance(rng = self.rng)
-				print('in turn frame number = ', self.odor_plume.frame_number)
+				#print('in turn frame number = ', self.odor_plume.frame_number)
 				self.fly_spatial_parameters.update_params(action)
 				odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, 
 					pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame)
