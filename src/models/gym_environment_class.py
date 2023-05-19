@@ -47,6 +47,7 @@ class FlyNavigator(Env):
 		self.excess_turn_dur = config['EXCESS_TURN_DUR_S']
 		self.theta_random_bounds = np.array([config['INIT_THETA_MIN'], config['INIT_THETA_MAX']])
 		self.all_episode_rewards = []
+		self.all_episode_success = []
 
 		self.initial_max_reset_x = config['INITIAL_MAX_RESET_X_MM']
 		self.reset_x_shift = config['RESET_X_SHIFT_MM']
@@ -162,7 +163,13 @@ class FlyNavigator(Env):
 
 		if done:
 
-			self.all_episode_rewards.append(self.total_episode_reward) 
+			self.all_episode_rewards.append(self.total_episode_reward)
+			if reward == 1:
+				self.all_episode_success.append(1)
+
+			else:
+				self.all_episode_success.append(0)
+
 			self.episode_incrementer += 1
 
 		info = {'concentration':all_obs[0], 'gradient':all_obs[1], 'hrc':all_obs[2], 
