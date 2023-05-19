@@ -72,7 +72,7 @@ models_dir = 'models'
 logdir = 'logs'
 
 model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=logdir, gamma = config_dict['GAMMA'], 
-	exploration_final_eps = config_dict['MIN_EPSILON'], n_cpu_tf_sess=1, seed = seed)
+	exploration_final_eps = config_dict['MIN_EPSILON'], seed = seed)
 
 #make these directories
 
@@ -81,7 +81,7 @@ save_steps = config_dict['STOP_FRAME'] #roughly after every episode
 for i in range(0, config_dict['N_EPISODES']):
 
 	model.learn(total_timesteps=save_steps, reset_num_timesteps=False, tb_log_name = str(seed)+"_DQN_model")
-	np.save('models/'+str(seed)+"_reward_history.npy", environment.reward_history)
+	np.save('models/'+str(seed)+"_reward_history.npy", environment.all_episode_rewards)
 	model.save('models/'+'after_'+str(config_dict['N_EPISODES']*i))
 
 
