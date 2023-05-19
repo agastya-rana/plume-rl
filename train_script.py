@@ -1,7 +1,12 @@
-##File for base RL training configuration parameters:
-##Dictionary should be imported only by run script and specific parameters changed there
-import numpy as np 
+from src.models.gym_environment_class import FlyNavigator
+from stable_baselines3.deepq.policies import MlpPolicy
+from stable_baselines3 import DQN
 
+import numpy as np 
+#from stable_baselines3 import DQN
+import time
+import sys 
+import os
 
 config_dict = {
 	
@@ -15,8 +20,8 @@ config_dict = {
 	"MM_PER_PX": 0.2,
 	"ANTENNA_LENGTH_MM": 1,
 	"ANTENNA_WIDTH_MM": 0.5,
-    "MAX_CONCENTRATION": 255,
-    "NORMALIZE_ODOR_FEATURES": True
+	"MAX_CONCENTRATION": 255,
+	"NORMALIZE_ODOR_FEATURES": True
 	"WALK_SPEED_MM_PER_S": 10,
 	"DELTA_T_S": 1/60,
     "PER_STEP_REWARD": 0,
@@ -26,7 +31,6 @@ config_dict = {
 	"MIN_FRAME": 500,
 	"STOP_FRAME": 5000,
 	"RESET_FRAME_RANGE": np.array([501,801]),
-	"RNG_SEED": 0,
 	"SOURCE_LOCATION_MM": np.array([30,90]),
 	"GOAL_RADIUS_MM": 10, #success radius in mm
 	"N_EPISODES" : 2000, # How many independently initialized runs to train on
@@ -52,6 +56,37 @@ config_dict = {
     "EXCESS_TURN_DUR_S": 0.18,
     "SHIFT_EPISODES": 150
 
-
-
 }
+
+seed = int(sys.argv[1])
+rng = np.random.default_rng(seed)
+plume_movie_path = os.path.join('..','src', 'data', 'plume_movies', 'intermittent_smoke.avi')
+config_dict['MOVIE_PATH'] = plume_movie_path
+config_dict['N_EPISODES'] = 2000
+
+environment = FlyNavigator(rng = rng, config = config_dict)
+
+num_steps = config_dict['STOP_FRAME']*config_dict['N_EPISODES']
+
+models_dir = 'models'
+logdir = 'logs'
+
+model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=logdir, gamma = config_dict['GAMMA'], 
+	exploration_final_eps = config_dict['MIN_EPSILON'], n_cpu_tf_sess=1, seed = seed)
+
+#make these directories
+
+save_steps = config_dict['STOP_FRAME'] #roughly after every episode
+
+for i in range(0, config_dict['N_EPISODES']):
+
+	model.learn(total_timesteps=save_steps, reset_num_timesteps=False, tb_log_name = str(seed)+"_DQN_model")
+	np.save('models/'+str(seed)+"_reward_history.npy", environment.reward_history)
+	model.save('models/'+'after_'+str(config_dict['N_EPISODES']*i))
+
+
+
+
+
+
+

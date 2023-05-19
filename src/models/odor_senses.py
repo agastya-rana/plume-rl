@@ -1,387 +1,194 @@
-from dataclasses import dataclass
+import numpy as np 
+import copy
 
-import numpy as np
-from scipy.stats import linregress
+#probably can make it inherit from packets class? Or make one class for videos and another for simulated plumes
 
-#CONCENTRATION_THRESHOLD = 100
-#ANTENNA_LENGTH = 14  # should be even
-#MAX_HISTORY_LENGTH = 1000
+def make_L_R_std_box(mm_per_px, antenna_height_mm, antenna_width_mm):
 
+	#makes left and right std boxes for antenna, to be translated and rotated. Assumes orientation is 0 degrees
+	#height is long axis of box, tyipcally. 
+	#If even then split left and right evenly. If odd then share middle. 
 
-def detect_local_odor_concentration(config, fly_location: np.ndarray, fly_orientation = None, odor_plume=None) -> float:
+	total_height = np.rint(antenna_height_mm/mm_per_px).astype(int)
+	total_width = np.rint(antenna_width_mm/mm_per_px).astype(int)
 
-    if config['USE_MOVIE']:
+	x_coords = np.linspace(0,total_width, num = total_width)*mm_per_px
+	y_coords = np.linspace(-total_height/2, total_height/2, num = total_height)*mm_per_px
+	
+	big_box = np.zeros((total_height*total_width,2))
 
-        mm_per_px = config['MM_PER_PX']
-        fly_location = fly_location/mm_per_px 
+	for i in range(0,total_height):
 
-        x, y = np.floor(fly_location).astype(int)
-        try:
-            local_odor_concentration: float = odor_plume[x, y]
-        except IndexError:
-            local_odor_concentration: float = 0
-        return local_odor_concentration
+		for j in range(0,total_width):
 
+			row_idx = i*total_width + j
 
-    
+			big_box[row_idx,0] = x_coords[j]
+			big_box[row_idx,1] = np.flip(y_coords)[i]
 
-"""
-@dataclass
-class OdorHistory:
-    value: np.ndarray = np.zeros(MAX_HISTORY_LENGTH)
 
-    def update(self, sensor_location: np.ndarray, odor_plume_frame: np.ndarray) -> np.ndarray:
-        local_odor_concentration = detect_local_odor_concentration(sensor_location, odor_plume_frame)
-        updated_odor_history: np.ndarray = np.append(self.value, local_odor_concentration)
-        updated_odor_history = np.delete(updated_odor_history, 0)
-        self.value = updated_odor_history
-        return self.value
+	#all_x = big_box[:,0]
+	all_y = big_box[:,1]
 
-    def clear(self):
-        self.value = np.zeros(MAX_HISTORY_LENGTH)
-        return self.value
-"""
+	left_bool = all_y >= 0
+	right_bool = all_y <= 0 
 
-def measure_odor_speed(config, odor_array_0: np.ndarray=None, odor_array_1: np.ndarray=None) -> int:
+	left_box = big_box[left_bool,:]
+	right_box = big_box[right_bool,:]
 
-    if config['ODOR_MOTION_CALCULATION_STYLE'] == 'frame_correlation':
 
-        ANTENNA_LENGTH = int(config['ANTENNA_LENGTH_MM']/config['MM_PER_PX'])
+	return left_box, right_box
 
-        odor_array_0_norm = odor_array_0 - np.mean(odor_array_0)
-        odor_array_1_norm = odor_array_1 - np.mean(odor_array_1)
-        delta_xs = np.arange(-1 * np.fix(ANTENNA_LENGTH / 2), 1 + np.fix(ANTENNA_LENGTH / 2))
-        speeds = np.zeros(shape=delta_xs.shape)
-        for index, delta_xi in enumerate(delta_xs):
-            speeds[index] = np.mean([odor_array_0_norm[antenna_pos] * odor_array_1_norm[int(antenna_pos + delta_xi)]
-                                     for antenna_pos in range(ANTENNA_LENGTH)
-                                     if antenna_pos + delta_xi in range(ANTENNA_LENGTH)])
-
-        if np.sum(np.amax(speeds) == speeds) != 1:  # If there are ties for max speed, it's ambiguous and set to 0
-            delta_x_hat = 0
-        else:
-            delta_x_hat = delta_xs[np.argmax(speeds)]
-        return delta_x_hat
-
-
-def detect_local_odor_motion(config, fly_location: np.ndarray, odor_frame_1: np.ndarray=None, odor_frame_2: np.ndarray=None) -> float:
-
-    if config['ODOR_MOTION_CALCULATION_STYLE'] == 'frame_correlation':
-
-        ANTENNA_LENGTH = int(config['ANTENNA_LENGTH_MM']/config['MM_PER_PX'])
-        mm_per_px = config['MM_PER_PX']
 
-        fly_location = fly_location/mm_per_px 
-        x, y = np.floor(fly_location).astype(int)
-        half_antenna = np.floor(ANTENNA_LENGTH / 2)
-        ys = np.arange(y - half_antenna, y + half_antenna).astype(int)
+class OdorFeatures():
 
-        try:
-            first_array = odor_frame_1[x, ys]
-            second_array = odor_frame_2[x, ys]
-            local_odor_motion = measure_odor_speed(config, odor_array_0=first_array, odor_array_1=second_array)
-        
-        except IndexError:
-                local_odor_motion: float = 0
-    
-    return local_odor_motion
+	def __init__(self, config):
+		self.dt = config['DELTA_T_S']
+		self.clear()
+		self.std_left_box, self.std_right_box = make_L_R_std_box(mm_per_px = config['MM_PER_PX'], antenna_height_mm = config['ANTENNA_LENGTH_MM'], antenna_width_mm = config['ANTENNA_WIDTH_MM'])
+		self.mm_per_px = config['MM_PER_PX']
+		self.use_movie = config['USE_MOVIE']
+		self.num_pts = np.shape(self.std_left_box)[0]
+		self.tau = config['TEMPORAL_FILTER_TIMESCALE_S']
+		self.adaptation_tau = config['TEMPORAL_THRESHOLD_ADAPTIVE_TIMESCALE_S']
+		self.filter_all = config['TEMPORAL_FILTER_ALL']
+		self.threshold_style = config['CONCENTRATION_THRESHOLD_STYLE']
+		self.base_threshold = config['CONCENTRATION_BASE_THRESHOLD']
+		self.max_conc = config['MAX_CONCENTRATION']
+		self.max_hrc = self.max_conc**2
+		self.max_t_L = self.dt*config['STOP_FRAME']
 
+		#other temporal ones here too
 
-def detect_local_odor_gradient(config, fly_location: np.ndarray=None, odor_frame: np.ndarray=None) -> float:
+	def _rotate_and_translate_sensors(self, theta, pos):
 
+		self.left_pts = np.zeros(np.shape(self.std_left_box))
+		self.right_pts = np.zeros(np.shape(self.std_right_box))
 
-    if config['GRADIENT_CALCULATION_STYLE'] == 'regression':
+		self.left_pts[:,0] = np.cos(theta)*self.std_left_box[:,0] - np.sin(theta)*self.std_left_box[:,1]
+		self.left_pts[:,1] = np.sin(theta)*self.std_left_box[:,0] + np.cos(theta)*self.std_left_box[:,1]
 
-        #note that since once we give flies orientation we are going to switch mean-subtraction for gradient, there is no attempt to do this for different orientations
+		self.right_pts[:,0] = np.cos(theta)*self.std_right_box[:,0] - np.sin(theta)*self.std_right_box[:,1]
+		self.right_pts[:,1] = np.sin(theta)*self.std_right_box[:,0] + np.cos(theta)*self.std_right_box[:,1]
 
-        ANTENNA_LENGTH = int(config['ANTENNA_LENGTH_MM']/config['MM_PER_PX']) 
-        mm_per_px = config['MM_PER_PX']
+		pos_arr = np.tile(pos, (self.num_pts,1))
 
-        fly_location = fly_location/mm_per_px
+		self.left_pts = self.left_pts + pos_arr
+		self.right_pts = self.right_pts + pos_arr
 
-        x, y = np.floor(fly_location).astype(int)
-        half_antenna = np.floor(ANTENNA_LENGTH / 2)
-        ys = np.arange(y - half_antenna, y + half_antenna).astype(int)
-        try:
-            odor_array = odor_frame[x, ys]
-            odor_array = odor_array.flatten()
-            local_odor_gradient = linregress(ys, odor_array)[0]
-        except IndexError:
-            local_odor_gradient: float = 0
-        return local_odor_gradient
-
-
-def detect_local_odor_gradient_2D(fly_location: np.ndarray, odor_frame: np.ndarray=None):
-
-
-    x, y = np.floor(fly_location).astype(int)
-    half_antenna = np.floor(ANTENNA_LENGTH / 2)
-    ys = np.arange(y - half_antenna, y + half_antenna).astype(int)
-    xs = np.arange(x - half_antenna, x + half_antenna).astype(int)
-    try:
-        odor_array_y = odor_frame[x, ys]
-        odor_array_y = odor_array_y.flatten()
-        local_odor_gradient_y = linregress(ys, odor_array_y)[0]
-    except IndexError:
-        local_odor_gradient_y: float = 0
-    try:
-        odor_array_x = odor_frame[xs, y]
-        odor_array_x = odor_array_x.flatten()
-        local_odor_gradient_x = linregress(xs, odor_array_x)[0]
-    except IndexError:
-        local_odor_gradient_x: float = 0
-    
-    local_odor_gradient_arr = np.array([local_odor_gradient_x, local_odor_gradient_y])
-    
-    return local_odor_gradient_arr
-
-
-def detect_local_odor_motion_2D(fly_location: np.ndarray, odor_frame_1: np.ndarray=None, odor_frame_2: np.ndarray=None):
-
-    x, y = np.floor(fly_location).astype(int)
-    half_antenna = np.floor(ANTENNA_LENGTH / 2)
-    ys = np.arange(y - half_antenna, y + half_antenna).astype(int)
-    xs = np.arange(x - half_antenna, x + half_antenna).astype(int)
-    # print("in detect_local_odor_motion, this is odor_frame_1", odor_frame_1)
-    # print("in detect_local_odor_motion, this is odor_frame_2", odor_frame_2)
-    # print("this is the shape of odor_frame_1", odor_frame_1.shape)
-    try:
-        first_array_y = odor_frame_1[x, ys]
-        second_array_y = odor_frame_2[x, ys]
-        local_odor_motion_y = measure_odor_speed(odor_array_0=first_array_y, odor_array_1=second_array_y)
-    except IndexError:
-        local_odor_motion_y: float = 0
-    try:
-        first_array_x = odor_frame_1[xs, y]
-        second_array_x = odor_frame_2[xs, y]
-        local_odor_motion_x = measure_odor_speed(odor_array_0=first_array_x, odor_array_1=second_array_x)
-    except IndexError:
-        local_odor_motion_x: float = 0
-    
-    local_odor_motion = np.array([local_odor_motion_x, local_odor_motion_y])
-    
-    return local_odor_motion
-
-
-def thresh_quantity(val):
-
-    if val == 0:
-
-        return 0
-
-    elif val > 0:
-
-        return 1
-
-    else:
-
-        return 2
-
-
-@dataclass
-class OdorFeatures:
-    concentration: float = 0
-    motion_speed: float = 0
-    gradient: float = 0
-
-    def update(self, config, sensor_location: np.ndarray, odor_plume_frame: np.ndarray, prior_odor_plume_frame: np.ndarray):
-        self.concentration = detect_local_odor_concentration(fly_location=sensor_location,
-                                                             odor_plume=odor_plume_frame, config=config)
-        self.motion_speed = detect_local_odor_motion(fly_location=sensor_location,
-                                                     odor_frame_1=prior_odor_plume_frame,
-                                                     odor_frame_2=odor_plume_frame, config=config)
-        self.gradient = detect_local_odor_gradient(fly_location=sensor_location,
-                                                   odor_frame=odor_plume_frame, config=config)
-
-        return self.motion_speed, self.gradient, self.concentration
-
-    def clear(self):
-        self.concentration = 0
-        self.motion_speed = 0
-        self.gradient = 0
-        return self.motion_speed, self.gradient, self.concentration
-
-    def discretize_features(self, config):  # This should be factored somewhere else
-        concentration = int(self.concentration > config['CONCENTRATION_THRESHOLD'])
-        if self.gradient == 0:
-            gradient = 0
-        elif self.gradient > 0:
-            gradient = 1
-        else:
-            gradient = 2
-
-        if self.motion_speed == 0:
-            motion_speed = 0
-        elif self.motion_speed > 0:
-            motion_speed = 1
-        else:
-            motion_speed = 2
 
-        return np.array([concentration, gradient, motion_speed])
-"""
-@dataclass
-class OdorFeatures_no_gradient:
+	def _get_left_right_odors(self, odor_frame = None):
 
-    concentration: float = 0
-    motion_speed: float = 0
+		self.left_odors = np.zeros(self.num_pts)
+		self.right_odors = np.zeros(self.num_pts)
 
-    def update(self, sensor_location: np.ndarray, odor_plume_frame: np.ndarray, prior_odor_plume_frame: np.ndarray):
-        self.concentration = detect_local_odor_concentration(fly_location=sensor_location,
-                                                             odor_plume=odor_plume_frame)
-        self.motion_speed = detect_local_odor_motion(fly_location=sensor_location,
-                                                     odor_frame_1=prior_odor_plume_frame,
-                                                     odor_frame_2=odor_plume_frame)
+		self.left_idxs = np.rint(self.left_pts/self.mm_per_px).astype(int)
+		self.right_idxs = np.rint(self.right_pts/self.mm_per_px).astype(int)
 
-        return self.motion_speed, self.concentration
+		for i in range(0,self.num_pts):
 
-    def clear(self):
-        self.concentration = 0
-        self.motion_speed = 0
-        return self.motion_speed, self.concentration
+			if self.use_movie:
 
-    def discretize_features(self):  # This should be factored somewhere else
-        concentration = int(self.concentration > CONCENTRATION_THRESHOLD)
+				try: 
+					self.left_odors[i] = odor_frame[self.left_idxs[i,0], self.left_idxs[i,1]]
+				except IndexError:
+					self.left_odors[i] = 0
 
-        if self.motion_speed == 0:
-            motion_speed = 0
-        elif self.motion_speed > 0:
-            motion_speed = 1
-        else:
-            motion_speed = 2
+				try:
+					self.right_odors[i] = odor_frame[self.right_idxs[i,0], self.right_idxs[i,1]]
+				except IndexError:
+					self.right_odors[i] = 0
 
-        return np.array([concentration, motion_speed])
+		self.mean_left_odor = np.mean(self.left_odors)
+		self.mean_right_odor = np.mean(self.right_odors)
 
-@dataclass
-class OdorFeatures_no_motion:
-    concentration: float = 0
-    gradient: float = 0
 
-    def update(self, sensor_location: np.ndarray, odor_plume_frame: np.ndarray, prior_odor_plume_frame: np.ndarray):
-        self.concentration = detect_local_odor_concentration(fly_location=sensor_location,
-                                                             odor_plume=odor_plume_frame)
+	def update(self, theta, pos, odor_frame):
 
-        self.gradient = detect_local_odor_gradient(fly_location=sensor_location,
-                                                   odor_frame=odor_plume_frame)
+		self._rotate_and_translate_sensors(theta = theta, pos = pos)
+		self._get_left_right_odors(odor_frame=odor_frame)
+		self.concentration = (1/2)*(self.mean_left_odor+self.mean_right_odor)
+		self.hrc = self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor
+		self.gradient = self.mean_left_odor - self.mean_right_odor
 
-        return self.gradient, self.concentration
+		#DO TEMPORAL ONES
 
-    def clear(self):
-        self.concentration = 0
-        self.gradient = 0
-        return self.gradient, self.concentration
+		if self.threshold_style == 'fixed':
 
-    def discretize_features(self):  # This should be factored somewhere else
-        concentration = int(self.concentration > CONCENTRATION_THRESHOLD)
-        if self.gradient == 0:
-            gradient = 0
-        elif self.gradient > 0:
-            gradient = 1
-        else:
-            gradient = 2
+			self.odor_bin = self.concentration > self.base_threshold
 
-        return np.array([concentration, gradient])
+		elif self.threshold_style == 'adaptive':
 
+			self.adaptation = self.dt/self.adaptation_tau*(self.concentration-self.adaptation)
+			self.threshold = np.maximum(self.base_threshold, self.adaptation)
+			self.odor_bin = self.concentration > self.threshold 
+		
+		self.intermittency += 1/self.tau*(self.odor_bin-self.intermittency)*self.dt
 
-@dataclass 
-class OdorFeatures_2D:
+		self.new_whiff = self.odor_bin * (not(self.odor_bin_prev))
 
-    def update(self, sensor_location: np.ndarray, odor_plume_frame: np.ndarray, prior_odor_plume_frame: np.ndarray):
+		self.t_now += self.dt
 
-        self.concentration = detect_local_odor_concentration(fly_location=sensor_location, odor_plume=odor_plume_frame)
-        self.gradient = detect_local_odor_gradient_2D(sensor_location, odor_plume_frame)
-        self.motion_speed = detect_local_odor_motion_2D(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
+		if self.new_whiff:
 
-        return self.motion_speed, self.gradient, self.concentration
+			self.t_whiff = copy.deepcopy(self.t_now)
 
+		self.t_L_arr[0] = self.t_L
+		self.t_L = self.t_now - self.t_whiff
+		self.t_L_arr[1] = self.t_L
 
-    def clear(self):
+		if self.filter_all:
 
-        self.concentration = 0
-        self.gradient = np.zeros(2)
-        self.motion_speed = np.zeros(2)
+			self.filt_conc = self.dt/self.tau*(self.concentration-self.filt_conc)
+			self.filt_grad = self.dt/self.tau*(self.gradient-self.filt_grad)
+			self.filt_hrc = self.dt/self.tau*(self.hrc-self.filt_hrc)
 
-        return self.motion_speed, self.gradient, self.concentration
+		
+		#UPDATE PREV VALUES FOR NEXT STEP
 
+		self.left_odor_prev = self.mean_left_odor
+		self.right_odor_prev = self.mean_right_odor
+		self.odor_prev = self.concentration
+		self.grad_prev = self.gradient
+		self.hrc_prev = self.hrc
+		self.odor_bin_prev = self.odor_bin
 
-    def discretize_features(self):
+		#RETURN 
 
-        concentration = int(self.concentration > CONCENTRATION_THRESHOLD)
 
+		if self.filter_all:
 
-        first_grad = thresh_quantity(self.gradient[0])
-        second_grad = thresh_quantity(self.gradient[1])
+			return np.array([self.filt_conc, self.filt_grad, self.filt_hrc, self.intermittency, self.t_L_arr[0], self.t_L_arr[1]])
 
-        first_mot = thresh_quantity(self.motion_speed[0])
-        second_mot = thresh_quantity(self.motion_speed[1])
+		else:
 
-        return np.array([concentration, first_grad, second_grad, first_mot, second_mot])
+			return np.array([self.concentration, self.gradient, self.hrc, self.intermittency, self.t_L_arr[0], self.t_L_arr[1]])
 
 
-class OdorFeatures_grad_2D:
+	def clear(self):
 
-    def update(self, sensor_location: np.ndarray, odor_plume_frame: np.ndarray, prior_odor_plume_frame: np.ndarray):
+		self.left_odor_prev = 0
+		self.right_odor_prev = 0
+		self.odor_prev = 0
+		self.odor_bin_prev = False
+		self.t_L = 100.
+		self.intermittency = 0
+		self.t_now = 0
+		self.concentration = 0
+		self.gradient = 0
+		self.hrc = 0
+		self.grad_prev = 0
+		self.hrc_prev = 0
+		self.conc_prev = 0
+		self.filt_conc = 0
+		self.filt_grad = 0
+		self.filt_hrc = 0
+		self.adaptation = 0
+		self.t_whiff = -100.
+		self.t_L_arr = np.array([100.,100+self.dt])
 
-        self.concentration = detect_local_odor_concentration(fly_location=sensor_location, odor_plume=odor_plume_frame)
-        self.gradient = detect_local_odor_gradient_2D(sensor_location, odor_plume_frame)
-        self.motion_speed = detect_local_odor_motion(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
 
-        return self.motion_speed, self.gradient, self.concentration
 
 
-    def clear(self):
 
-        self.concentration = 0
-        self.gradient = np.zeros(2)
-        self.motion_speed = 0
-
-        return self.motion_speed, self.gradient, self.concentration
-
-
-    def discretize_features(self):
-
-        concentration = int(self.concentration > CONCENTRATION_THRESHOLD)
-
-
-        first_grad = thresh_quantity(self.gradient[0])
-        second_grad = thresh_quantity(self.gradient[1])
-
-        mot = thresh_quantity(self.motion_speed)
-
-        return np.array([concentration, first_grad, second_grad, mot])
-
-
-
-class OdorFeatures_motion_2D:
-
-    def update(self, sensor_location: np.ndarray, odor_plume_frame: np.ndarray, prior_odor_plume_frame: np.ndarray):
-
-        self.concentration = detect_local_odor_concentration(fly_location=sensor_location, odor_plume=odor_plume_frame)
-        self.gradient = detect_local_odor_gradient(sensor_location, odor_plume_frame)
-        self.motion_speed = detect_local_odor_motion_2D(sensor_location, odor_frame_1 = prior_odor_plume_frame, odor_frame_2 = odor_plume_frame)
-
-        return self.motion_speed, self.gradient, self.concentration
-
-
-    def clear(self):
-
-        self.concentration = 0
-        self.gradient = 0
-        self.motion_speed = np.zeros(2)
-
-        return self.motion_speed, self.gradient, self.concentration
-
-
-    def discretize_features(self):
-
-        concentration = int(self.concentration > CONCENTRATION_THRESHOLD)
-
-
-        grad = thresh_quantity(self.gradient)
-
-        first_mot = thresh_quantity(self.motion_speed[0])
-        second_mot = thresh_quantity(self.motion_speed[1])
-
-        return np.array([concentration, grad, first_mot, second_mot])
-
-"""
 

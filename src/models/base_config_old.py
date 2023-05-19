@@ -5,27 +5,19 @@ import numpy as np
 
 config_dict = {
 	
-	"NUM_ACTIONS": 4,
-    "OBSERVATION_DIMENSION": 7,
-	"CONCENTRATION_BASE_THRESHOLD": 100, #100 good for videos, around 1 good for plume sims-remember to change!
-	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
-    "TEMPORAL_FILTER_TIMESCALE_S": 1,
-    "TEMPORAL_THRESHOLD_ADAPTIVE_TIMESCALE_S":5,
-    "TEMPORAL_FILTER_ALL":False,
+	"CONCENTRATION_THRESHOLD": 100, #100 good for videos, around 1 good for plume sims-remember to change!
 	"MM_PER_PX": 0.2,
 	"ANTENNA_LENGTH_MM": 1,
 	"ANTENNA_WIDTH_MM": 0.5,
-    "MAX_CONCENTRATION": 255,
-    "NORMALIZE_ODOR_FEATURES": True
 	"WALK_SPEED_MM_PER_S": 10,
 	"DELTA_T_S": 1/60,
-    "PER_STEP_REWARD": 0,
 	"WITH_ORIENTATION": False,
 	"USE_MOVIE": True,
 	"MOVIE_PATH": None,
 	"MIN_FRAME": 500,
 	"STOP_FRAME": 5000,
 	"RESET_FRAME_RANGE": np.array([501,801]),
+	"PACKET_SIM_DICT":None,
 	"RNG_SEED": 0,
 	"SOURCE_LOCATION_MM": np.array([30,90]),
 	"GOAL_RADIUS_MM": 10, #success radius in mm
@@ -35,8 +27,8 @@ config_dict = {
     "GAMMA":0.95, # Reward temporal discount factor
     "MAX_EPSILON":1, # Starting exploration rate
     "MIN_EPSILON":0.01, # Asymptote of decaying exploration rate
-    "DECAY":0.05, # Rate of exploration decay per episode
-    "MIN_RESET_X_MM": 42, # Initialization condition-minimum agent x in mm
+    "DECAY":0.05, # Rate of exploration decay
+    "MIN_RESET_X_MM": 55, # Initialization condition-minimum agent x in mm
     "MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
     "MIN_RESET_Y_MM": 0,
     "MAX_RESET_Y_MM": 180,
@@ -47,10 +39,8 @@ config_dict = {
     "SOURCE_LOC_MM": np.array([30,90]), #Source location in mm
     "INIT_THETA_MIN": 0,
     "INIT_THETA_MAX": 2*np.pi,
-    "TURN_ANG_SPEED_RAD_PER_S": 100*np.pi/180,
-    "MIN_TURN_DUR_S": 0.18,
-    "EXCESS_TURN_DUR_S": 0.18,
-    "SHIFT_EPISODES": 150
+    "ODOR_MOTION_CALCULATION_STYLE": 'frame_correlation',
+    "GRADIENT_CALCULATION_STYLE": 'regression',
 
 
 
