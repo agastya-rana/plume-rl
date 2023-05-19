@@ -39,7 +39,6 @@ class FlyNavigator(Env):
 		self.config = config
 		self.max_frames = config['STOP_FRAME']
 		self.episode_incrementer = 0
-		self.flip_list = self.rng.choice(np.array([0,1]), size = config['N_EPISODES']).astype(bool)
 		self.min_reset_x = config['MIN_RESET_X_MM']
 		self.max_reset_x = config['MAX_RESET_X_MM']
 		self.min_reset_y = config['MIN_RESET_Y_MM']
@@ -47,7 +46,7 @@ class FlyNavigator(Env):
 		self.min_turn_dur = config['MIN_TURN_DUR_S']
 		self.excess_turn_dur = config['EXCESS_TURN_DUR_S']
 		self.theta_random_bounds = np.array([config['INIT_THETA_MIN'], config['INIT_THETA_MAX']])
-		self.all_episode_rewards = np.zeros(config['N_EPISODES']) + np.nan
+		self.all_episode_rewards = []
 
 		self.initial_max_reset_x = self.min_reset_x + self.goal_radius
 
@@ -60,7 +59,8 @@ class FlyNavigator(Env):
 	def reset(self):
 
 		self.total_episode_reward = 0
-		self.odor_plume.reset(flip = self.flip_list[self.episode_incrementer], rng = self.rng)
+		flip = self.rng.choice(np.array([0,1])).astype(bool)
+		self.odor_plume.reset(flip = flip, rng = self.rng)
 		self.turn_durs = self.min_turn_dur + self.rng.exponential(scale = self.excess_turn_dur, size = self.max_frames)
 		self.num_turns = 0
 		odor_on = self.odor_plume.frame > self.config['CONCENTRATION_BASE_THRESHOLD']
@@ -161,7 +161,7 @@ class FlyNavigator(Env):
 
 		if done:
 
-			self.all_episode_rewards[self.episode_incrementer] = self.total_episode_reward
+			self.all_episode_rewards.append(self.total_episode_reward) 
 			self.episode_incrementer += 1
 
 		info = {'concentration':all_obs[0], 'gradient':all_obs[1], 'hrc':all_obs[2], 

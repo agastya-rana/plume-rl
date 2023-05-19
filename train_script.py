@@ -81,7 +81,7 @@ save_steps = config_dict['STOP_FRAME'] #roughly after every episode
 for i in range(0, config_dict['N_EPISODES']):
 
 	model.learn(total_timesteps=save_steps, reset_num_timesteps=False, tb_log_name = str(seed)+"_DQN_model")
-	np.save('models/'+str(seed)+"_reward_history.npy", environment.all_episode_rewards)
+	np.save('models/'+str(seed)+"_reward_history.npy", np.array(environment.all_episode_rewards))
 	model.save('models/'+'after_'+str(config_dict['N_EPISODES']*i))
 
 
