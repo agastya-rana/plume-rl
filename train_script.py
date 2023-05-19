@@ -1,5 +1,5 @@
 from src.models.gym_environment_class import FlyNavigator
-from stable_baselines3.deepq.policies import MlpPolicy
+#from stable_baselines3.deepq.policies import MlpPolicy
 from stable_baselines3 import DQN
 
 import numpy as np 
