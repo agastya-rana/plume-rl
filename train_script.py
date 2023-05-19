@@ -12,7 +12,7 @@ config_dict = {
 	
 	"NUM_ACTIONS": 4,
     "OBSERVATION_DIMENSION": 7,
-	"CONCENTRATION_BASE_THRESHOLD": 100, #100 good for videos, around 1 good for plume sims-remember to change!
+	"CONCENTRATION_BASE_THRESHOLD": 0.5, #100 good for videos, around 1 good for plume sims-remember to change!
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
     "TEMPORAL_FILTER_TIMESCALE_S": 1,
     "TEMPORAL_THRESHOLD_ADAPTIVE_TIMESCALE_S":5,

@@ -57,6 +57,7 @@ class OdorFeatures():
 		self.max_conc = config['MAX_CONCENTRATION']
 		self.max_hrc = self.max_conc**2
 		self.max_t_L = self.dt*config['STOP_FRAME']
+		self.normalize = config['NORMALIZE_ODOR_FEATURES']
 
 		#other temporal ones here too
 
@@ -136,6 +137,15 @@ class OdorFeatures():
 		self.t_L_arr[0] = self.t_L
 		self.t_L = self.t_now - self.t_whiff
 		self.t_L_arr[1] = self.t_L
+
+		if self.normalize:
+
+			self.adaptation = self.adaptation/self.max_conc
+			self.concentration = self.concentration/self.max_conc
+			self.gradient = self.gradient/self.max_conc
+			self.hrc = self.hrc/self.max_hrc
+			self.t_L_arr = self.t_L_arr/self.max_t_L
+
 
 		if self.filter_all:
 
