@@ -5,9 +5,8 @@ from typing import Protocol
 
 import cv2
 import numpy as np
-from numpy.random import default_rng
-
-from src.models.geometry import AngleField
+#from numpy.random import default_rng
+#from src.models.geometry import AngleField
 
 class OdorPlumeFromMovie:
     def __init__(self, config):
