@@ -68,7 +68,7 @@ class FlyNavigator(Env):
 		valid_locations = odor_on_indices*self.config['MM_PER_PX']
 
 		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
-			max_reset_x = np.min([self.max_reset_x, 5*int(self.episode_incrementer/self.shift_episodes)*self.source_radius+self.initial_max_reset_x])
+			max_reset_x = np.min([self.max_reset_x, 5*int(self.episode_incrementer/self.shift_episodes)*self.goal_radius+self.initial_max_reset_x])
 			self.x_random_bounds = np.array([self.min_reset_x, max_reset_x])
 
 		self.fly_spatial_parameters.randomize_parameters(rng=self.rng, x_bounds=self.x_random_bounds, y_bounds=self.y_random_bounds, 
