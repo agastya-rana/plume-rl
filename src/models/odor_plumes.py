@@ -10,7 +10,7 @@ class OdorPlumeFromMovie:
         self.stop_frame = config['STOP_FRAME']
         self.video_capture = cv2.VideoCapture(self.movie_path)
         self.fps = self.video_capture.get(cv2.CAP_PROP_FPS) ## Gets the FPS
-        self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.frame_number) ## Sets the frame number to the frame number of the first frame
+        self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame) ## Sets the frame number to the frame number of the first frame
         self.frame = self.read_frame()
         self.source_location: np.ndarray = config['SOURCE_LOCATION_MM']
         self.flip: bool = False

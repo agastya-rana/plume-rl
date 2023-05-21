@@ -3,8 +3,10 @@
 
 import torch
 from torch import nn
+import gym
+from typing import List, Optional, Tuple, Type, Union, Dict, Callable, Any
 from stable_baselines3 import PPO
-from stable_baselines3.common.policies import BasePolicy, register_policy
+from stable_baselines3.common.policies import BasePolicy, register_policy, ActorCriticPolicy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 class RNNFeaturesExtractor(BaseFeaturesExtractor):
@@ -24,7 +26,7 @@ class RNNFeaturesExtractor(BaseFeaturesExtractor):
         out, _ = self.rnn(observations.unsqueeze(1), hidden_state)
         return out.squeeze(1)
 
-class CustomActorCriticPolicy(BasePolicy):
+class RNNActorCriticPolicy(ActorCriticPolicy):
     def __init__(
         self, 
         observation_space: gym.spaces.Space, 
@@ -35,7 +37,7 @@ class CustomActorCriticPolicy(BasePolicy):
         *args, 
         **kwargs
     ):
-        super(CustomActorCriticPolicy, self).__init__(
+        super(RNNActorCriticPolicy, self).__init__(
             observation_space,
             action_space,
             lr_schedule,
@@ -49,9 +51,9 @@ class CustomActorCriticPolicy(BasePolicy):
         self.features_extractor = RNNFeaturesExtractor(observation_space)
 
 
-def define_model(env, actor_layers=[128, 128, 128], critic_layers=[128, 128, 128]):
-    register_policy("CustomActorCriticPolicy", CustomActorCriticPolicy)
-    model = PPO("CustomActorCriticPolicy", env, verbose=1, policy_kwargs={"net_arch": [dict(pi=actor_layers, vf=critic_layers)]})
+def define_model(env, config, actor_layers=[128, 128, 128], critic_layers=[128, 128, 128]):
+    register_policy("RNNActorCriticPolicy", RNNActorCriticPolicy)
+    model = PPO("RNNActorCriticPolicy", env, verbose=1, policy_kwargs={"net_arch": [dict(pi=actor_layers, vf=critic_layers)]})
     return model
 
 def policy_probs(model, state):

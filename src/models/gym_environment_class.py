@@ -2,6 +2,7 @@ import numpy as np
 from gym import Env
 from gym.spaces import Box, Discrete
 import imageio
+import matplotlib.pyplot as plt
 from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.odor_plumes import *
 from src.models.odor_senses import *
@@ -16,18 +17,22 @@ class FlyNavigator(Env):
 	This class specifies the reset and step actions that are needed for openAI gym.
 	The 'render' method is part of Gym environments but isn't implemented yet.
     """
+	
+	metadata = {'render.modes': ['human']}
+	## Define the bounds for each of the observables, update as superset of observables grows
+	observable_bounds = {'conc': [0, np.inf], 'grad': [-np.inf, np.inf], 'hrc': [-np.inf, np.inf], 'int': [0, 1], 't_L_prev': [0, np.inf], 't_L_current': [0, np.inf], 'theta': [0, 2*np.pi]}
 
 	def __init__(self, rng, config):
 		## Initialize spatial parameters, odor features, and odor plume
 		self.fly_spatial_parameters = FlySpatialParameters(config)
 		self.odor_features = OdorFeatures(config)
 		self.odor_plume = OdorPlumeFromMovie(config)
-
 		#order = conc, grad, hrc, int, t_L_prev, t_L_current, theta
 		## Define the observation space and action space
 		## TODO: instead of hardcoding variables, implement a dictionary in a config file to select which; update odor_senses.py accordingly
-		self.observation_space = Box(low = np.array([0, -np.inf, -np.inf, 0, 0, 0, 0]), high = np.array([np.inf, np.inf, np.inf, 1, np.inf, np.inf, 2*np.pi]))
-		self.obs_dim = config['OBSERVATION_DIMENSION']
+		self.observables = config['OBSERVABLES'] ## This is a tuple of strings that specify which variables are observable
+		self.observation_space = Box(low = np.array([self.observable_bounds[feature][0] for feature in self.observables]), high = np.array([self.observable_bounds[feature][1] for feature in self.observables]))
+		self.obs_dim = len(self.observables)
 		self.action_space = Discrete(config['NUM_ACTIONS'])
 		self.goal_radius = config['GOAL_RADIUS_MM']
 		self.source_location = config['SOURCE_LOCATION_MM']
@@ -37,8 +42,7 @@ class FlyNavigator(Env):
 		self.config = config
 		self.max_frames = config['STOP_FRAME']
 		self.episode_incrementer = 0
-		## Flip list is used to flip movie about the x-axis
-		self.flip_list = self.rng.choice(np.array([0,1]), size = config['N_EPISODES']).astype(bool)
+		self.flip_list = self.rng.choice(np.array([0,1]), size = config['N_EPISODES']).astype(bool) ## Flip list is used to flip movie about the x-axis
 		self.min_reset_x = config['MIN_RESET_X_MM']
 		self.max_reset_x = config['MAX_RESET_X_MM']
 		self.min_reset_y = config['MIN_RESET_Y_MM']
@@ -53,7 +57,7 @@ class FlyNavigator(Env):
 		self.shift_episodes = config['SHIFT_EPISODES']
 		self.trajectory_number = 0
 		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
-        self.fig, self.ax = plt.subplots()
+		self.fig, self.ax = plt.subplots()
 		self.video = False
 		self.writer = imageio.get_writer('movie.mp4', fps=30)
 
@@ -151,25 +155,25 @@ class FlyNavigator(Env):
 
 
 	def render(self, mode='human'):
-        if mode == 'human':
-            # Clear the previous plot
-            self.ax.clear()
-            
-            # Plot odor background in grayscale
+		if mode == 'human':
+			# Clear the previous plot
+			self.ax.clear()
+			
+			# Plot odor background in grayscale
 			self.ax.imshow(self.odor_plume.frame, cmap='gray')
 			# Plot the odor source
 			self.ax.scatter(*self.source_location, color='green')
 			## Plot the goal radius
 			self.ax.add_patch(patches.Circle(self.source_location, self.goal_radius, color='green', fill=False))
-            # Plot the current position and orientation of the fly
-            self.ax.scatter(*self.fly_params.position, color='red')
-            self.ax.add_patch(patches.Arrow(*self.fly_params.position, np.cos(self.fly_params.theta), np.sin(self.fly_params.theta), color='red'))
+			# Plot the current position and orientation of the fly
+			self.ax.scatter(*self.fly_params.position, color='red')
+			self.ax.add_patch(patches.Arrow(*self.fly_params.position, np.cos(self.fly_params.theta), np.sin(self.fly_params.theta), color='red'))
 			
-            
-            # Plot the trajectory of the fly
-            self.fly_trajectory[self.trajectory_number] = self.fly_params.position
+			
+			# Plot the trajectory of the fly
+			self.fly_trajectory[self.trajectory_number] = self.fly_params.position
 			self.trajectory_number += 1
-            self.ax.plot(*zip(*self.fly_trajectory), color='blue')
+			self.ax.plot(*zip(*self.fly_trajectory), color='blue')
 
 			# Set the plot limits
 			self.ax.set_xlim(0, self.odor_plume.frame.shape[1])
@@ -182,14 +186,14 @@ class FlyNavigator(Env):
 				image = image.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
 				self.writer.append_data(image)
 
-            # Annotate plot with current odor detections
-            odor_features = self.odor_params.update(self.fly_params.theta, self.fly_params.position, self.odor_plume.frame)
-            textstr = f"Concentration: {odor_features[0]:.2f}\nGradient: {odor_features[1]:.2f}\nVelocity: {odor_features[2]:.2f}"
-            props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-            self.ax.text(0.05, 0.95, textstr, transform=self.ax.transAxes, fontsize=14,
-                verticalalignment='top', bbox=props)
-        else:
-            super(FlyNavigator, self).render(mode=mode)
+			# Annotate plot with current odor detections
+			odor_features = self.odor_params.update(self.fly_params.theta, self.fly_params.position, self.odor_plume.frame)
+			textstr = f"Concentration: {odor_features[0]:.2f}\nGradient: {odor_features[1]:.2f}\nVelocity: {odor_features[2]:.2f}"
+			props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+			self.ax.text(0.05, 0.95, textstr, transform=self.ax.transAxes, fontsize=14,
+				verticalalignment='top', bbox=props)
+		else:
+			super(FlyNavigator, self).render(mode=mode)
 		
 		def close(self):
 			if self.video:

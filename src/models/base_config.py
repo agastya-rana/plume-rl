@@ -6,6 +6,7 @@ import numpy as np
 config_dict = {
 	
 	"NUM_ACTIONS": 4,
+    "OBSERVABLES": ("conc", "grad", "hrc", "int", "t_L_prev", "t_L_current", "theta"),
     "OBSERVATION_DIMENSION": 7,
 	"CONCENTRATION_BASE_THRESHOLD": 0.5, #100 good for videos, around 1 good for plume sims-remember to change!
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
