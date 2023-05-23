@@ -44,5 +44,7 @@ class OdorPlumeFromMovie:
 
     def read_frame(self):
         _, frame = self.video_capture.read()
+        ## 2 is the red channel
+        ## Transpose the frame so that the first axis is the longer axis, and the second axis is the y axis
         frame = frame[:, :, 2].T
         return frame

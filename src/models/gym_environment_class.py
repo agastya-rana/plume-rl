@@ -2,7 +2,11 @@ import numpy as np
 from gym import Env
 from gym.spaces import Box, Discrete
 import imageio
+import matplotlib
+matplotlib.use('Agg')  # Use the 'Agg' backend
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
 from src.models.fly_spatial_parameters import FlySpatialParameters
 from src.models.odor_plumes import *
 from src.models.odor_senses import *
@@ -58,7 +62,7 @@ class FlyNavigator(Env):
 		self.trajectory_number = 0
 		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
 		self.fig, self.ax = plt.subplots()
-		self.video = False
+		self.video = config['VIDEO']
 		self.writer = imageio.get_writer('movie.mp4', fps=30)
 
 
@@ -75,7 +79,6 @@ class FlyNavigator(Env):
 		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
 			max_reset_x = np.min([self.max_reset_x, 5*int(self.episode_incrementer/self.shift_episodes)*self.goal_radius+self.initial_max_reset_x]) ## Anneals the max reset x position outwards
 			self.x_random_bounds = np.array([self.min_reset_x, max_reset_x])
-
 		self.fly_spatial_parameters.randomize_parameters(rng=self.rng, x_bounds=self.x_random_bounds, y_bounds=self.y_random_bounds, 
 			theta_bounds = self.theta_random_bounds, valid_locations=valid_locations) ## Randomize the fly's initial position and orientation
 
@@ -100,7 +103,7 @@ class FlyNavigator(Env):
 			all_obs[0:-1] = odor_obs
 			all_obs[-1] = self.fly_spatial_parameters.theta
 			reward = self.per_step_reward
-			if self.odor_plume.frame_number >= self.max_frames:				
+			if self.odor_plume.frame_number >= self.max_frames:		
 				done = True
 			else:
 				done = False
@@ -153,31 +156,41 @@ class FlyNavigator(Env):
 
 		return all_obs, reward, done, info
 
+	def draw_pointer(self, ax, position, angle, length=1.0, color='red'):
+		# Calculate the vertices of the triangle
+		x = position[0]
+		y = position[1]
+		vertices = np.array([[x - length/4, y], [x + length/4, y], [x, y + length]])
+
+		# Rotate the vertices by the given angle around the center
+		angle = angle - np.pi/2 # Correct for the fact that the triangle is drawn pointing up
+		rotation_matrix = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
+		rotated_vertices = np.dot(vertices - position, rotation_matrix.T) + position
+		# Plot the triangle
+		ax.fill(rotated_vertices[:, 0], rotated_vertices[:, 1], color=color)
 
 	def render(self, mode='human'):
 		if mode == 'human':
 			# Clear the previous plot
 			self.ax.clear()
-			
 			# Plot odor background in grayscale
-			self.ax.imshow(self.odor_plume.frame, cmap='gray')
+			self.ax.imshow(self.odor_plume.frame.T, cmap='gray', extent=(0, self.odor_plume.frame.shape[0]*self.config['MM_PER_PX'], 0, self.odor_plume.frame.shape[1]*self.config['MM_PER_PX']))
 			# Plot the odor source
 			self.ax.scatter(*self.source_location, color='green')
 			## Plot the goal radius
 			self.ax.add_patch(patches.Circle(self.source_location, self.goal_radius, color='green', fill=False))
 			# Plot the current position and orientation of the fly
-			self.ax.scatter(*self.fly_params.position, color='red')
-			self.ax.add_patch(patches.Arrow(*self.fly_params.position, np.cos(self.fly_params.theta), np.sin(self.fly_params.theta), color='red'))
-			
-			
+			self.draw_pointer(self.ax, self.fly_spatial_parameters.position, self.fly_spatial_parameters.theta, length=10,color='red')
+			#self.ax.scatter(*self.fly_spatial_parameters.position, color='red')
+			#self.ax.add_patch(patches.Arrow(*self.fly_spatial_parameters.position, np.cos(self.fly_spatial_parameters.theta), np.sin(self.fly_spatial_parameters.theta), width=0.5, head_width=4, color='red'))
 			# Plot the trajectory of the fly
-			self.fly_trajectory[self.trajectory_number] = self.fly_params.position
+			self.fly_trajectory[self.trajectory_number] = self.fly_spatial_parameters.position
 			self.trajectory_number += 1
-			self.ax.plot(*zip(*self.fly_trajectory), color='blue')
+			self.ax.plot(*zip(*self.fly_trajectory), color='cyan')
 
 			# Set the plot limits
-			self.ax.set_xlim(0, self.odor_plume.frame.shape[1])
-			self.ax.set_ylim(0, self.odor_plume.frame.shape[0])
+			self.ax.set_xlim(0, self.odor_plume.frame.shape[0]*self.config['MM_PER_PX'])
+			self.ax.set_ylim(0, self.odor_plume.frame.shape[1]*self.config['MM_PER_PX'])
 			
 			if self.video:
 				# Save current frame to the video file
@@ -187,11 +200,15 @@ class FlyNavigator(Env):
 				self.writer.append_data(image)
 
 			# Annotate plot with current odor detections
-			odor_features = self.odor_params.update(self.fly_params.theta, self.fly_params.position, self.odor_plume.frame)
+			odor_features = self.odor_features.update(self.fly_spatial_parameters.theta, self.fly_spatial_parameters.position, self.odor_plume.frame)
 			textstr = f"Concentration: {odor_features[0]:.2f}\nGradient: {odor_features[1]:.2f}\nVelocity: {odor_features[2]:.2f}"
-			props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+			props = dict(boxstyle='round', facecolor='white', alpha=0.5)
 			self.ax.text(0.05, 0.95, textstr, transform=self.ax.transAxes, fontsize=14,
 				verticalalignment='top', bbox=props)
+			
+			# Draw the plot
+			#plt.pause(0.0001)
+
 		else:
 			super(FlyNavigator, self).render(mode=mode)
 		
