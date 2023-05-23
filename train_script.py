@@ -17,6 +17,7 @@ config_dict = {
 	"CONCENTRATION_BASE_THRESHOLD": 0.5, #100 good for videos, around 1 good for plume sims-remember to change!
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
 	"ODOR_FEATURES_CLASS": OdorFeatures, #note, not an instantiation
+	"DISCRETIZE_ODOR_FEATURES": False,
 	"TEMPORAL_FILTER_TIMESCALE_S": 1,
 	"TEMPORAL_THRESHOLD_ADAPTIVE_TIMESCALE_S":5,
 	"TEMPORAL_FILTER_ALL":False,
