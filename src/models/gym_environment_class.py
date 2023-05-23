@@ -128,7 +128,7 @@ class FlyNavigator(Env):
 				all_obs[-1] = self.fly_spatial_parameters.theta				
 
 				if self.odor_plume.frame_number >= self.max_frames:				
-					done = True	
+					done = True
 					break				
 				else:
 					done = False
