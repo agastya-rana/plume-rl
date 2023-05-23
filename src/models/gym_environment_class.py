@@ -29,7 +29,8 @@ class FlyNavigator(Env):
 	def __init__(self, rng, config):
 		## Initialize spatial parameters, odor features, and odor plume
 		self.fly_spatial_parameters = FlySpatialParameters(config)
-		self.odor_features = OdorFeatures(config)
+		odor_class = config['ODOR_FEATURES_CLASS']
+		self.odor_features = odor_class(config)
 		self.odor_plume = OdorPlumeFromMovie(config)
 		#order = conc, grad, hrc, int, t_L_prev, t_L_current, theta
 		## Define the observation space and action space
@@ -46,7 +47,6 @@ class FlyNavigator(Env):
 		self.config = config
 		self.max_frames = config['STOP_FRAME']
 		self.episode_incrementer = 0
-		self.flip_list = self.rng.choice(np.array([0,1]), size = config['N_EPISODES']).astype(bool) ## Flip list is used to flip movie about the x-axis
 		self.min_reset_x = config['MIN_RESET_X_MM']
 		self.max_reset_x = config['MAX_RESET_X_MM']
 		self.min_reset_y = config['MIN_RESET_Y_MM']
@@ -54,8 +54,12 @@ class FlyNavigator(Env):
 		self.min_turn_dur = config['MIN_TURN_DUR_S'] ## Minimum turn duration in seconds
 		self.excess_turn_dur = config['EXCESS_TURN_DUR_S'] ## Scale parameter for the exponential distribution of turn durations
 		self.theta_random_bounds = np.array([config['INIT_THETA_MIN'], config['INIT_THETA_MAX']])
-		self.all_episode_rewards = np.zeros(config['N_EPISODES']) + np.nan
-		self.initial_max_reset_x = self.min_reset_x + self.goal_radius
+		self.all_episode_rewards = []
+		self.all_episode_success = []
+
+		self.initial_max_reset_x = config['INITIAL_MAX_RESET_X_MM']
+		self.reset_x_shift = config['RESET_X_SHIFT_MM']
+
 		self.x_random_bounds = np.array([self.min_reset_x, self.initial_max_reset_x])
 		self.y_random_bounds = np.array([self.min_reset_y, self.max_reset_y])
 		self.shift_episodes = config['SHIFT_EPISODES']
@@ -69,7 +73,8 @@ class FlyNavigator(Env):
 	def reset(self):
 		## Reset method in gym returns the initial observation (state) of the environment
 		self.total_episode_reward = 0
-		self.odor_plume.reset(flip = self.flip_list[self.episode_incrementer], rng = self.rng)
+		flip = self.rng.choice(np.array([0,1])).astype(bool)
+		self.odor_plume.reset(flip = flip, rng = self.rng)
 		self.turn_durs = self.min_turn_dur + self.rng.exponential(scale = self.excess_turn_dur, size = self.max_frames)
 		self.num_turns = 0
 		odor_on = self.odor_plume.frame > self.config['CONCENTRATION_BASE_THRESHOLD']
@@ -77,7 +82,7 @@ class FlyNavigator(Env):
 		valid_locations = odor_on_indices*self.config['MM_PER_PX']
 
 		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
-			max_reset_x = np.min([self.max_reset_x, 5*int(self.episode_incrementer/self.shift_episodes)*self.goal_radius+self.initial_max_reset_x]) ## Anneals the max reset x position outwards
+			max_reset_x = np.min([self.max_reset_x, int(self.episode_incrementer/self.shift_episodes)*self.reset_x_shift+self.initial_max_reset_x])
 			self.x_random_bounds = np.array([self.min_reset_x, max_reset_x])
 		self.fly_spatial_parameters.randomize_parameters(rng=self.rng, x_bounds=self.x_random_bounds, y_bounds=self.y_random_bounds, 
 			theta_bounds = self.theta_random_bounds, valid_locations=valid_locations) ## Randomize the fly's initial position and orientation
@@ -148,7 +153,14 @@ class FlyNavigator(Env):
 		self.total_episode_reward += reward
 
 		if done:
-			self.all_episode_rewards[self.episode_incrementer] = self.total_episode_reward
+
+			self.all_episode_rewards.append(self.total_episode_reward)
+			if reward == 1:
+				self.all_episode_success.append(1)
+
+			else:
+				self.all_episode_success.append(0)
+
 			self.episode_incrementer += 1
 
 		info = {'concentration':all_obs[0], 'gradient':all_obs[1], 'hrc':all_obs[2], 
