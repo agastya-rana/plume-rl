@@ -176,7 +176,7 @@ class OdorFeatures():
 
 
 	def clear(self):
-
+		## Reset all values
 		self.left_odor_prev = 0
 		self.right_odor_prev = 0
 		self.odor_prev = 0

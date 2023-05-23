@@ -4,6 +4,9 @@ import numpy as np
 
 
 config_dict = {
+	
+	"NUM_ACTIONS": 4,
+    "OBSERVABLES": ("conc", "grad", "hrc", "int", "t_L_prev", "t_L_current", "theta"),
 
     "NUM_ACTIONS": 4,
     "OBSERVATION_DIMENSION": 7,
