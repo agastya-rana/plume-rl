@@ -21,7 +21,8 @@ class FlyNavigator(Env):
 
 
 		self.fly_spatial_parameters = FlySpatialParameters(config)
-		self.odor_features = OdorFeatures(config)
+		odor_class = config['ODOR_FEATURES_CLASS']
+		self.odor_features = odor_class(config)
 		self.odor_plume = OdorPlumeFromMovie(config)
 		#self.reward_flag = RewardSchemeEnum.GOAL_ZONE
 

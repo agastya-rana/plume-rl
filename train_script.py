@@ -1,3 +1,4 @@
+from src.models.odor_senses import *
 from src.models.gym_environment_class import FlyNavigator
 #from stable_baselines3.deepq.policies import MlpPolicy
 from stable_baselines3 import DQN
@@ -15,6 +16,7 @@ config_dict = {
 	"OBSERVATION_DIMENSION": 7,
 	"CONCENTRATION_BASE_THRESHOLD": 0.5, #100 good for videos, around 1 good for plume sims-remember to change!
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
+	"ODOR_FEATURES_CLASS": OdorFeatures, #note, not an instantiation
 	"TEMPORAL_FILTER_TIMESCALE_S": 1,
 	"TEMPORAL_THRESHOLD_ADAPTIVE_TIMESCALE_S":5,
 	"TEMPORAL_FILTER_ALL":False,
