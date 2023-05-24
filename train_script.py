@@ -34,8 +34,8 @@ config_dict = {
 	"USE_MOVIE": True,
 	"MOVIE_PATH": None,
 	"MIN_FRAME": 500,
-	"STOP_FRAME": 515,
-	"RESET_FRAME_RANGE": np.array([501,511]),
+	"STOP_FRAME": 5000,
+	"RESET_FRAME_RANGE": np.array([501,800]),
 	"SOURCE_LOCATION_MM": np.array([30,90]),
 	"GOAL_RADIUS_MM": 10, #success radius in mm
 	"N_EPISODES" : 2000, # How many independently initialized runs to train on
