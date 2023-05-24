@@ -12,8 +12,8 @@ def make_L_R_std_box(mm_per_px, antenna_height_mm, antenna_width_mm):
 	total_height = np.rint(antenna_height_mm/mm_per_px).astype(int)
 	total_width = np.rint(antenna_width_mm/mm_per_px).astype(int)
 
-	print('total width = ', total_width)
-	print('height = ', total_height)
+	#print('total width = ', total_width)
+	#print('height = ', total_height)
 
 	x_coords = np.linspace(0,total_width, num = total_width)*mm_per_px
 	y_coords = np.linspace(-total_height/2, total_height/2, num = total_height)*mm_per_px
