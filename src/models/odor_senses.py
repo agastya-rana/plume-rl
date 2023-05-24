@@ -6,7 +6,7 @@ import copy
 def make_L_R_std_box(mm_per_px, antenna_height_mm, antenna_width_mm):
 
 	#makes left and right std boxes for antenna, to be translated and rotated. Assumes orientation is 0 degrees
-	#height is long axis of box, tyipcally. 
+	#height is long axis of box, typically.
 	#If even then split left and right evenly. If odd then share middle. 
 
 	total_height = np.rint(antenna_height_mm/mm_per_px).astype(int)

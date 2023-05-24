@@ -1,13 +1,13 @@
 ##File for base RL training configuration parameters:
 ##Dictionary should be imported only by run script and specific parameters changed there
 import numpy as np 
+from src.models.odor_senses import OdorFeatures
 
 
 config_dict = {
 	
 	"NUM_ACTIONS": 4,
     "OBSERVABLES": ("conc", "grad", "hrc", "int", "t_L_prev", "t_L_current", "theta"),
-
     "NUM_ACTIONS": 4,
     "OBSERVATION_DIMENSION": 7,
     "CONCENTRATION_BASE_THRESHOLD": 0.5, #100 good for videos, around 1 good for plume sims-remember to change!
@@ -54,6 +54,4 @@ config_dict = {
     "EXCESS_TURN_DUR_S": 0.18,
     "SHIFT_EPISODES": 100,
     "RESET_X_SHIFT_MM": 5
-
-
 }

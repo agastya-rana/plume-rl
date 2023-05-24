@@ -32,7 +32,7 @@ class FlyNavigator(Env):
 		odor_class = config['ODOR_FEATURES_CLASS']
 		self.odor_features = odor_class(config)
 		self.odor_plume = OdorPlumeFromMovie(config)
-		#order = conc, grad, hrc, int, t_L_prev, t_L_current, theta
+		## order = conc, grad, hrc, int, t_L_prev, t_L_current, theta
 		## Define the observation space and action space
 		## TODO: instead of hardcoding variables, implement a dictionary in a config file to select which; update odor_senses.py accordingly
 		self.observables = config['OBSERVABLES'] ## This is a tuple of strings that specify which variables are observable
@@ -224,17 +224,7 @@ class FlyNavigator(Env):
 		else:
 			super(FlyNavigator, self).render(mode=mode)
 		
-		def close(self):
-			if self.video:
-				self.writer.close()
-			super(FlyNavigator, self).close()
-
-
-
-
-
-
-
-
-
-
+	def close(self):
+		if self.video:
+			self.writer.close()
+		super(FlyNavigator, self).close()
