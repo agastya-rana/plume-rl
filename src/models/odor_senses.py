@@ -131,12 +131,12 @@ class OdorFeatures():
 			try: 
 				self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
 			except IndexError:
-				self.left_odors = 0
+				self.left_odors = np.zeros(self.num_pts)
 
 			try:
 				self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
 			except IndexError:
-				self.right_odors = 0
+				self.right_odors = np.zeros(self.num_pts)
 
 		self.mean_left_odor = np.mean(self.left_odors)
 		self.mean_right_odor = np.mean(self.right_odors)
@@ -313,12 +313,12 @@ class OdorFeatures_no_temporal():
 			try: 
 				self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
 			except IndexError:
-				self.left_odors = 0
+				self.left_odors = np.zeros(self.num_pts)
 
 			try:
 				self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
 			except IndexError:
-				self.right_odors = 0
+				self.right_odors = np.zeros(self.num_pts)
 
 		self.mean_left_odor = np.mean(self.left_odors)
 		self.mean_right_odor = np.mean(self.right_odors)
