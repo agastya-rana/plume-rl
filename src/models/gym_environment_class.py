@@ -15,12 +15,14 @@ from src.models.odor_senses import *
 class FlyNavigator(Env):
 
 	"""
-	This is structured like the OpenAI Gym Environments, with reset and step actions.
+	An OpenAI Gym Environment for a fly navigating in an odor plume. Environment
+	is defined by the step and rest methods. The step method takes an action and
+	returns the next state, reward, and whether the episode is done. The reset method
+	resets the environment to a random initial state.
+
 	When it is initialized, it takes a bunch of parameters that define how rewards are
 	calculated, what the odor plume is, what the agent senses (odor features).
-	Actual instances of this class are composed in motion_environment_factory.py
-	This class specifies the reset and step actions that are needed for openAI gym.
-	The 'render' method is part of Gym environments but isn't implemented yet.
+
     """
 	
 	metadata = {'render.modes': ['human']}
@@ -29,18 +31,10 @@ class FlyNavigator(Env):
 
 	def __init__(self, rng, config):
 		## Initialize spatial parameters, odor features, and odor plume
-		self.fly_spatial_parameters = FlySpatialParameters(config)
-		odor_class = config['ODOR_FEATURES_CLASS']
+		self.fly_spatial_parameters = FlySpatialParameters(config) ## True (x,y,theta); note fly may not have direct access to theta.
+		odor_class = config['ODOR_FEATURES_CLASS'] ## Defines which odor features are available to the fly.
 		self.odor_features = odor_class(config)
-		self.odor_plume = OdorPlumeFromMovie(config)
-<<<<<<< HEAD
-		## order = conc, grad, hrc, int, t_L_prev, t_L_current, theta
-		## Define the observation space and action space
-		## TODO: instead of hardcoding variables, implement a dictionary in a config file to select which; update odor_senses.py accordingly
-		self.observables = config['OBSERVABLES'] ## This is a tuple of strings that specify which variables are observable
-		self.observation_space = Box(low = np.array([self.observable_bounds[feature][0] for feature in self.observables]), high = np.array([self.observable_bounds[feature][1] for feature in self.observables]))
-		self.obs_dim = len(self.observables)
-=======
+		self.odor_plume = OdorPlumeFromMovie(config) ## Defines the odor plume the fly is navigating in.
 
 		if config['USE_COSINE_AND_SIN_THETA']:
 
@@ -49,8 +43,9 @@ class FlyNavigator(Env):
 			self.observables.append('sin_theta')
 			odor_observable_bounds = self.odor_features.odor_observable_bounds
 			num = np.shape(odor_observable_bounds)[0]
-			self.observable_bounds = np.zeros((num+2, 2))
-			self.observable_bounds[0:num,:] = odor_observable_bounds
+			self.observable_bounds = np.zeros((num+2, 2)) ## + 2 for cos and sin theta
+			self.observable_bounds[:num,:] = odor_observable_bounds ## imported from odor_features
+			## Bounds for cos and sin theta
 			self.observable_bounds[num,0] = -1
 			self.observable_bounds[num,1] = 1
 			self.observable_bounds[num+1,0] = -1
@@ -60,23 +55,19 @@ class FlyNavigator(Env):
 
 			self.observables = copy.deepcopy(self.odor_features.odor_observables)
 			self.observables.append('theta')
-			odor_observable_bounds = self.odor_features.odor_observable_bounds
+			odor_observable_bounds = self.odor_features.odor_observable_bounds ## imported from odor_features
 			num = np.shape(odor_observable_bounds)[0]
 			self.observable_bounds = np.zeros((num+1, 2))
 			self.observable_bounds[0:num,:] = odor_observable_bounds
 			self.observable_bounds[num,0] = 0
 			self.observable_bounds[num,1] = 2*np.pi
 
-		if config['DISCRETIZE_OBSERVABLES']:
-
-			assert self.odor_features.can_discretize, "Class does not have discretization capability"
-
 		if config['USE_COSINE_AND_SIN_THETA']:
 
-			assert not config['DISCRETIZE_OBSERVABLES'], "using sin and cos but trying to discretize-use theta directly instead"
+			assert not config['DISCRETIZE_OBSERVABLES'], "using sin and cos but trying to discretize; use theta directly instead"
 
 		if config['DISCRETIZE_OBSERVABLES']:
-
+			assert self.odor_features.can_discretize, "Class does not have discretization capability"
 			self.theta_discretization = config['THETA_DISCRETIZATION']
 			all_obs_inds = copy.deepcopy(self.odor_features.discretization_index)
 			all_obs_inds.append(self.theta_discretization) #note that for discretized states it doesn't make sense to split into sin and cos so this assumes only 1 theta observable
@@ -91,7 +82,6 @@ class FlyNavigator(Env):
 		self.discretize_observables = config['DISCRETIZE_OBSERVABLES']
 		self.num_odor_obs = len(self.odor_features.odor_observables)
 		self.obs_dim = len(self.observables) 
->>>>>>> master
 		self.action_space = Discrete(config['NUM_ACTIONS'])
 		self.goal_radius = config['GOAL_RADIUS_MM']
 		self.source_location = config['SOURCE_LOCATION_MM']
@@ -120,7 +110,7 @@ class FlyNavigator(Env):
 		self.trajectory_number = 0
 		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
 		self.fig, self.ax = plt.subplots()
-		self.video = config['RENDER_VIDEO'] #whether 
+		self.video = config['RENDER_VIDEO'] ## Whether or not to render a video of the fly's trajectory
 		self.writer = imageio.get_writer('movie.mp4', fps=30)
 
 	def _add_theta_observation(self):
