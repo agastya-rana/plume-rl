@@ -131,7 +131,7 @@ class OdorFeatures():
 			try: 
 				self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
 			except IndexError:
-				self.left_odors[i] = 0
+				self.left_odors = 0
 
 			try:
 				self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
@@ -313,7 +313,7 @@ class OdorFeatures_no_temporal():
 			try: 
 				self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
 			except IndexError:
-				self.left_odors[i] = 0
+				self.left_odors = 0
 
 			try:
 				self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
