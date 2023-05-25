@@ -90,7 +90,7 @@ for _ in range(3000):
     action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
     obs, _, done, _ = render_env.step(action)
     render_env.render()
-    # If the episode is done, reset the environment
+    # If the episode is done, reset the environment (for vector environments, we don't need to reset manually)
     if done:
         obs = render_env.reset()
         episode_start = True

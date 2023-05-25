@@ -1,27 +1,17 @@
 plume-rl
 ==============================
 
-Solve odor plume navigation problems with RL.
+Solve odor plume navigation problems with RL. The odor navigation environment (the plume itself, navigator's action space and state space) are defined in src/environment.
+Models used to solve this problem are in src/models. Scripts used to train these models are in src/training_scripts.
 
-### Notes
-The jupyter notebook `notebooks/basic_q_learning.ipynb` shows how to train a basic plume-navigating agent.
-It's a good place to start to see the methods of the environment class (based on openAI Gym environments).
+### TODO
+Agastya is working on the following tasks to upgrade the codebase:
+* Adding code to simulate more odor plumes
+* Adding parallelization ability; figuring out how to correctly use VecEnv in SB3 to parallelize rollouts.
+* Adding more odor features to the state space as required.
 
-### To Do
-The current implementation is very basic. On a technical side, it would be good to add:
-* the ability to run multiple agent simulations in parallel on the same plume
-* turn the training regime into a function
-* add other training approaches (parameterize a continuous function from states/actions to values, for example)
-* add other plume movies and simulations
-
-On the non-technical side
-* what if agent orients its sensors?
-* what if agent has an orientation that is updated with a turning-based action space?
-* where are gradients vs motions especially useful?
-* how to perform well across diverse plume types?
-* incorporate odor hit frequency and intermittency
-* action and stimulus history more broadly (may require a deep RL approach if the state space grows)
-
+If we want to explore different action spaces from the fly (e.g. to conduct 'ablation' studies), it might
+be worth defining new environments.
 
 Project Organization
 ------------
