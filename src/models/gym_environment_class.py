@@ -37,17 +37,6 @@ class FlyNavigator(Env):
 		self.use_cos_and_sin = state_dict['USE_COSINE_AND_SIN_THETA']
 		self.discrete_obs = state_dict["DISCRETE_OBSERVABLES"]
 
-		if self.use_cos_and_sin:
-			assert not self.discrete_obs, "using sin and cos but trying to discretize; use theta directly instead"
-			self.observable_bounds = np.vstack((self.odor_features.feat_bounds, np.array([[-1, 1], [-1, 1]]))) ## bounds for cos and sin theta
-			self.observables = copy.deepcopy(state_dict['FEATURES'])
-			self.observables.append('cos_theta')
-			self.observables.append('sin_theta')
-		else:
-			self.observables = copy.deepcopy(state_dict['FEATURES'])
-			self.observables.append('theta')
-			self.observable_bounds = np.vstack((self.odor_features.feat_bounds, np.array([[0, 2*np.pi]]))) ## bounds for theta
-
 		if self.discrete_obs:
 			assert self.odor_features.can_discretize, "Set of features used does not have discretization capability"
 			self.theta_discretization = state_dict['THETA_DISCRETIZATION']
@@ -55,7 +44,19 @@ class FlyNavigator(Env):
 			all_obs_inds.append(self.theta_discretization) #note that for discretized states it doesn't make sense to split into sin and cos so this assumes only 1 theta observable
 			self.observation_space = MultiDiscrete(all_obs_inds)
 			self.theta_bins = np.linspace(0, 2*np.pi, self.theta_discretization+1)
+			self.observables = copy.deepcopy(state_dict['FEATURES'])
+			self.observables.append('theta')
 		else:
+			if self.use_cos_and_sin:
+				assert not self.discrete_obs, "using sin and cos but trying to discretize; use theta directly instead"
+				self.observable_bounds = np.vstack((self.odor_features.feat_bounds, np.array([[-1, 1], [-1, 1]]))) ## bounds for cos and sin theta
+				self.observables = copy.deepcopy(state_dict['FEATURES'])
+				self.observables.append('cos_theta')
+				self.observables.append('sin_theta')
+			else:
+				self.observables = copy.deepcopy(state_dict['FEATURES'])
+				self.observables.append('theta')
+				self.observable_bounds = np.vstack((self.odor_features.feat_bounds, np.array([[0, 2*np.pi]]))) ## bounds for theta
 			self.observation_space = Box(low=self.observable_bounds[:, 0], high=self.observable_bounds[:, 1])
 		
 		self.num_odor_obs = len(state_dict['FEATURES'])
