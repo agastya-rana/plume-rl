@@ -1,17 +1,16 @@
 import numpy as np 
 
 class FlySpatialParameters():
-
 	def __init__(self, config):
 		## Initialize the fly's spatial parameters
 		self.theta = 0 ## Heading angle in radians
 		self.position = np.array([0,0]) ## Position in mm
-		self.turn_ang_spd = config['TURN_ANG_SPEED_RAD_PER_S'] ## Turning speed in radians per second
-		self.walk_spd = config['WALK_SPEED_MM_PER_S'] ## Walking speed in mm per second
-		self.dt = config['DELTA_T_S'] ## Time step in seconds
+		agent_dict = config['agent']
+		self.turn_ang_spd = agent_dict['TURN_ANG_SPEED_RAD_PER_S'] ## Turning speed in radians per second
+		self.walk_spd = agent_dict['WALK_SPEED_MM_PER_S'] ## Walking speed in mm per second
+		self.dt = agent_dict['DELTA_T_S'] ## Time step in seconds
 		self.walk_step_size = self.walk_spd*self.dt ## Distance traveled in one time step
 		self.ang_step_size = self.turn_ang_spd*self.dt ## Angle turned in one time step
-
 
 	def update_params(self, action):
 		## Update the fly's position and heading angle based on the action taken

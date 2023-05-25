@@ -3,18 +3,18 @@ import numpy as np
 
 class OdorPlumeFromMovie:
     def __init__(self, config):
-        self.movie_path = config['MOVIE_PATH']
-        self.reset_frame_range = config['RESET_FRAME_RANGE']
-        self.frame_number = config['MIN_FRAME']
-        self.start_frame = config['MIN_FRAME']
-        self.stop_frame = config['STOP_FRAME']
+        plume_dict = config['plume']
+        self.movie_path = plume_dict['MOVIE_PATH']
+        self.reset_frame_range = plume_dict['RESET_FRAME_RANGE']
+        self.frame_number = plume_dict['MIN_FRAME']
+        self.start_frame = plume_dict['MIN_FRAME']
+        self.stop_frame = plume_dict['STOP_FRAME']
         self.video_capture = cv2.VideoCapture(self.movie_path)
         self.fps = self.video_capture.get(cv2.CAP_PROP_FPS) ## Gets the FPS
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame) ## Sets the frame number to the frame number of the first frame
         self.frame = self.read_frame()
-        self.source_location: np.ndarray = config['SOURCE_LOCATION_MM']
+        self.source_location: np.ndarray = plume_dict['SOURCE_LOCATION_MM']
         self.flip: bool = False
-        self.config = config
         _, frame = self.video_capture.read()
         frame = frame[:,:,2].T
         frame_shape = np.shape(frame)

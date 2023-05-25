@@ -1,217 +1,182 @@
 import numpy as np 
 import copy
 
-#probably can make it inherit from packets class? Or make one class for videos and another for simulated plumes
-
-def make_L_R_std_box(mm_per_px, antenna_height_mm, antenna_width_mm):
-
-	#makes left and right std boxes for antenna, to be translated and rotated. Assumes orientation is 0 degrees
-	#height is long axis of box, typically.
-	#If even then split left and right evenly. If odd then share middle. 
-
-	total_height = np.rint(antenna_height_mm/mm_per_px).astype(int)
-	total_width = np.rint(antenna_width_mm/mm_per_px).astype(int)
-
-	print('total width = ', total_width)
-	print('height = ', total_height)
-
-	x_coords = np.linspace(0,total_width, num = total_width)*mm_per_px
-	y_coords = np.linspace(-total_height/2, total_height/2, num = total_height)*mm_per_px
-	
-	big_box = np.zeros((total_height*total_width,2))
-
-	for i in range(0,total_height):
-
-		for j in range(0,total_width):
-
-			row_idx = i*total_width + j
-
-			big_box[row_idx,0] = x_coords[j]
-			big_box[row_idx,1] = np.flip(y_coords)[i]
-
-
-	#all_x = big_box[:,0]
-	all_y = big_box[:,1]
-
-	left_bool = all_y >= 0
-	right_bool = all_y <= 0 
-
-	left_box = big_box[left_bool,:]
-	right_box = big_box[right_bool,:]
-
-
-	return left_box, right_box
-
-
 class OdorFeatures():
 
 	def __init__(self, config):
-		self.dt = config['DELTA_T_S']
-		self.can_discretize = False
+		agent_dict = config['agent']
+		plume_dict = config['plume']
+		state_dict = config['state']
+		self.dt = agent_dict['DELTA_T_S']
+		self.features = state_dict['FEATURES']
+		self.can_discretize = set(self.features).issubset(set(['conc_disc', 'grad_disc', 'hrc_disc']))
+		assert self.can_discretize, "Can only discretize concentration, gradient, and hrc"
 		self.clear()
-		self.std_left_box, self.std_right_box = make_L_R_std_box(mm_per_px = config['MM_PER_PX'], antenna_height_mm = config['ANTENNA_LENGTH_MM'], antenna_width_mm = config['ANTENNA_WIDTH_MM'])
-		self.mm_per_px = config['MM_PER_PX']
-		self.use_movie = config['USE_MOVIE']
+
+		self.threshold_style = state_dict['CONCENTRATION_THRESHOLD_STYLE']
+		self.base_threshold = state_dict['CONCENTRATION_BASE_THRESHOLD']
+		self.max_conc = state_dict['MAX_CONCENTRATION']
+		timescales = state_dict['TIMESCALES_S']
+		self.tau = timescales['FILTER'] if "FILTER" in timescales else None
+		self.adaptation_tau = timescales['ADAPTATION'] if "ADAPTATION" in timescales else None
+		self.max_t_L = self.dt*plume_dict["STOP_FRAME"]
+
+		self.normalize = state_dict['NORMALIZE_ODOR_FEATURES']
+
+		feature_func_map = {'conc': get_conc, 'grad': get_grad, 'hrc': get_hrc, 'conc_left': get_conc_left, 'conc_right': get_conc_right, 'intermittency': get_intermittency, 't_L': get_t_L, 
+		'conc_disc': get_conc_disc, 'grad_disc': get_grad_disc, 'hrc_disc': get_hrc_disc}
+		bounds_func_map = {'conc': [0, self.max_conc], 'grad': [-self.max_conc, self.max_conc], 'hrc': [-self.max_conc, self.max_conc], 'conc_left': [0, self.max_conc], 
+		'conc_right': [0, self.max_conc], 'intermittency': [0, 1], 't_L': [0, self.max_t_L]}
+		normalize_bounds_func_map = {'conc': [0, 1], 'grad': g[-1, 1], 'hrc': [-1, 1], 'conc_left': [0, 1], 'conc_right': [0, 1], 'intermittency': [0, 1], 't_L': [0, 1]}
+
+		self.mm_per_px = plume_dict['MM_PER_PX']
+		self.std_left_box, self.std_right_box = self._make_L_R_std_box(mm_per_px = self.mm_per_px, antenna_height_mm = agent_dict['ANTENNA_LENGTH_MM'], antenna_width_mm = agent_dict['ANTENNA_WIDTH_MM'])
+		self.use_movie = not (plume_dict['MOVIE_PATH'] is None)
 		self.num_pts = np.shape(self.std_left_box)[0]
-		self.tau = config['TEMPORAL_FILTER_TIMESCALE_S']
-		self.adaptation_tau = config['TEMPORAL_THRESHOLD_ADAPTIVE_TIMESCALE_S']
-		self.filter_all = config['TEMPORAL_FILTER_ALL']
-		self.threshold_style = config['CONCENTRATION_THRESHOLD_STYLE']
-		self.base_threshold = config['CONCENTRATION_BASE_THRESHOLD']
-		self.max_conc = config['MAX_CONCENTRATION']
-		self.max_hrc = self.max_conc**2
-		self.max_t_L = self.dt*config['STOP_FRAME']
-		self.normalize = config['NORMALIZE_ODOR_FEATURES']
-		self.odor_observables = ['concentration', 'gradient', 'hrc', 'intermittency', 't_L_1', 't_L_2'] #this will be changed but keeping it like this for now just so it runs
-		self.odor_observable_bounds = np.zeros((len(self.odor_observables), 2))
 
-		if self.normalize:
+		self.func_evals = [feature_func_map[feat] for feat in self.features]
+		self.feat_bounds = np.array([bounds_func_map[feat] if self.normalize else normalize_bounds_func_map[feat] for feat in [f for f in self.features if f not in ['conc_disc', 'grad_disc', 'hrc_disc']]])
+		num_discrete = lambda x : 3 if x in ['grad_disc', 'hrc_disc'] else 2
+		self.discretization_index = [num_discrete(f) for f in self.features if f in ['conc_disc', 'grad_disc', 'hrc_disc']]
 
-			self.odor_observable_bounds[0,0] = 0 #concentration low
-			self.odor_observable_bounds[0,1] = 1 #concentration high
-			self.odor_observable_bounds[1,0] = -1 #gradient low
-			self.odor_observable_bounds[1,1] = 1 #gradient high
-			self.odor_observable_bounds[2,0] = -1 #hrc low
-			self.odor_observable_bounds[2,1] = 1 #hrc high
-			self.odor_observable_bounds[3,0] = 0 #intermittency low
-			self.odor_observable_bounds[3,1] = 1 #intermittency high
-			self.odor_observable_bounds[4,0] = 0 #t_L low
-			self.odor_observable_bounds[4,1] = 1 #t_L high
-			self.odor_observable_bounds[5,0] = 0 #other t_L low
-			self.odor_observable_bounds[5,1] = 1 #other t_L high
+	@static_method
+	def _make_L_R_std_box(mm_per_px, antenna_height_mm, antenna_width_mm):
 
+		"""
+		Make a standard left and right box for the antenna that can be rotated and translated to match the orientation and position of the antenna.
+		"""
+		## Height is long axis of box, typically.
+		## If even then split left and right evenly. If odd then share middle. 
 
-		else:
+		## TODO: check that orientation is correct here (assumption is 0 degrees)
 
-			#same order as above
+		px_height = round(antenna_height_mm/mm_per_px)
+		px_width = round(antenna_width_mm/mm_per_px)
 
-			self.odor_observable_bounds[0,0] = 0
-			self.odor_observable_bounds[0,1] = self.max_conc
-			self.odor_observable_bounds[1,0] = -self.max_conc
-			self.odor_observable_bounds[1,1] = self.max_conc
-			self.odor_observable_bounds[2,0] = -self.max_hrc
-			self.odor_observable_bounds[2,1] = self.max_hrc
-			self.odor_observable_bounds[3,0] = 0
-			self.odor_observable_bounds[3,1] = 1
-			self.odor_observable_bounds[4,0] = 0
-			self.odor_observable_bounds[4,1] = self.max_t_L
-			self.odor_observable_bounds[5,0] = 0
-			self.odor_observable_bounds[5,1] = self.max_t_L
+		x_coords = np.linspace(0, px_width,px_width)*mm_per_px
+		y_coords = np.flip(np.linspace(-px_height/2, px_height/2,px_height)*mm_per_px)
+		
+		## Make a big box with meshgrid.
+		big_box = np.zeros((px_height*px_width,2))
+		x_grid, y_grid = np.meshgrid(x_coords, y_coords)
+		big_box = np.column_stack((x_grid.flatten(), y_grid.flatten()))
 
+		# Separate the box into left and right halves.
+    	left_box = big_box[big_box[:, 1] >= 0]
+    	right_box = big_box[big_box[:, 1] <= 0]
 
-		#other temporal ones here too
+    	return left_box, right_box
+		
+	
+	@static_method
+	def _rotate_points(points, theta):
+		## Assumes that points is a 2D array with x and y coordinates in the first and second columns, respectively.
+		x = np.cos(theta) * points[:, 0] - np.sin(theta) * points[:, 1]
+		y = np.sin(theta) * points[:, 0] + np.cos(theta) * points[:, 1]
+		return np.column_stack((x, y))
 
 	def _rotate_and_translate_sensors(self, theta, pos):
-
-		self.left_pts = np.zeros(np.shape(self.std_left_box))
-		self.right_pts = np.zeros(np.shape(self.std_right_box))
-
-		self.left_pts[:,0] = np.cos(theta)*self.std_left_box[:,0] - np.sin(theta)*self.std_left_box[:,1]
-		self.left_pts[:,1] = np.sin(theta)*self.std_left_box[:,0] + np.cos(theta)*self.std_left_box[:,1]
-
-		self.right_pts[:,0] = np.cos(theta)*self.std_right_box[:,0] - np.sin(theta)*self.std_right_box[:,1]
-		self.right_pts[:,1] = np.sin(theta)*self.std_right_box[:,0] + np.cos(theta)*self.std_right_box[:,1]
-
 		pos_arr = np.tile(pos, (self.num_pts,1))
-
-		self.left_pts = self.left_pts + pos_arr
-		self.right_pts = self.right_pts + pos_arr
+		self.left_pts = self._rotate_points(self.std_left_box, theta) + pos_arr
+		self.right_pts = self._rotate_points(self.std_right_box, theta) + pos_arr
 
 
 	def _get_left_right_odors(self, odor_frame = None):
-
 		self.left_odors = np.zeros(self.num_pts)
 		self.right_odors = np.zeros(self.num_pts)
-
 		self.left_idxs = np.rint(self.left_pts/self.mm_per_px).astype(int)
 		self.right_idxs = np.rint(self.right_pts/self.mm_per_px).astype(int)
 
 		if self.use_movie:
-
 			try: 
 				self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
 			except IndexError:
+				raise Warning('IndexError in _get_left_right_odors. Setting left_odors to zeros.')
 				self.left_odors = np.zeros(self.num_pts)
-
 			try:
 				self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
 			except IndexError:
+				raise Warning('IndexError in _get_left_right_odors. Setting right_odors to zeros.')
 				self.right_odors = np.zeros(self.num_pts)
 
 		self.mean_left_odor = np.mean(self.left_odors)
 		self.mean_right_odor = np.mean(self.right_odors)
-
-
+	
+	def get_features(self):
+		self.update_bins()
+		self.update_whiff()
+		feats = np.array([self.func_evals[i](normalize=self.normalize) for i in range(len(self.func_evals))])
+		return feats
+	
 	def update(self, theta, pos, odor_frame):
-
+		## Returns the odor features requested in the order of state_dict['features']
 		self._rotate_and_translate_sensors(theta = theta, pos = pos)
 		self._get_left_right_odors(odor_frame=odor_frame)
-		self.concentration = (1/2)*(self.mean_left_odor+self.mean_right_odor)
-		self.hrc = self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor
-		self.gradient = self.mean_left_odor - self.mean_right_odor
+		return self.get_features()
 
-		#DO TEMPORAL ONES
+	def get_conc_left(self, normalize=False):
+		return self.mean_left_odor/self.max_conc if normalize else self.mean_left_odor
+	
+	def get_conc_right(self, normalize=False):
+		return self.mean_right_odor/self.max_conc if normalize else self.mean_right_odor
+	
+	def get_conc(self, normalize=False):
+		return (self.mean_left_odor + self.mean_right_odor)/(2*self.max_conc) if normalize else (self.mean_left_odor + self.mean_right_odor)/2
+	
+	def get_grad(self, normalize=False):
+		return (self.mean_left_odor - self.mean_right_odor) / self.max_conc if normalize else self.mean_left_odor - self.mean_right_odor
 
+	def get_hrc(self, normalize=False):
+		return self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor if normalize else (self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor)/(self.max_conc**2)
+	
+	def get_intermittency(self, normalize=False):
+		self.intermittency += 1/self.tau*(self.odor_bin-self.intermittency)*self.dt
+		return self.intermittency
+
+	def get_t_L(self, normalize=False):
+		return self.t_now - self.t_whiff if normalize else (self.t_now - self.t_whiff)/self.max_t_L
+	
+	def get_conc_disc(self, normalize=False):
+		return int(self.concentration > self.base_threshold)
+	
+	def get_grad_disc(self, normalize=False):
+		if self.mean_left_odor > self.mean_right_odor:
+			return 0
+		elif self.mean_left_odor < self.mean_right_odor:
+			return 1
+		else:
+			return 2
+	
+	def get_hrc_disc(self, normalize=False):
+		if self.left_odor_prev*self.mean_right_odor > self.right_odor_prev*self.mean_left_odor:
+			return 0
+		elif self.left_odor_prev*self.mean_right_odor < self.right_odor_prev*self.mean_left_odor:
+			return 1
+		else:
+			return 2
+
+	def update_bins(self):
 		if self.threshold_style == 'fixed':
-
 			self.odor_bin = self.concentration > self.base_threshold
 
 		elif self.threshold_style == 'adaptive':
-
 			self.adaptation = self.dt/self.adaptation_tau*(self.concentration-self.adaptation)
 			self.threshold = np.maximum(self.base_threshold, self.adaptation)
-			self.odor_bin = self.concentration > self.threshold 
-		
-		self.intermittency += 1/self.tau*(self.odor_bin-self.intermittency)*self.dt
+			self.odor_bin = self.concentration > self.threshold 	
 
+	def update_whiff(self):
 		self.new_whiff = self.odor_bin * (not(self.odor_bin_prev))
-
 		self.t_now += self.dt
-
 		if self.new_whiff:
-
 			self.t_whiff = copy.deepcopy(self.t_now)
 
-		self.t_L_arr[0] = self.t_L
-		self.t_L = self.t_now - self.t_whiff
-		self.t_L_arr[1] = self.t_L
-
-		if self.normalize:
-
-			self.adaptation = self.adaptation/self.max_conc
-			self.concentration = self.concentration/self.max_conc
-			self.gradient = self.gradient/self.max_conc
-			self.hrc = self.hrc/self.max_hrc
-			self.t_L_arr = self.t_L_arr/self.max_t_L
-
-
-		if self.filter_all:
-
-			self.filt_conc = self.dt/self.tau*(self.concentration-self.filt_conc)
-			self.filt_grad = self.dt/self.tau*(self.gradient-self.filt_grad)
-			self.filt_hrc = self.dt/self.tau*(self.hrc-self.filt_hrc)
-
-		
-		#UPDATE PREV VALUES FOR NEXT STEP
-
+	def update_hist(self):
 		self.left_odor_prev = self.mean_left_odor
 		self.right_odor_prev = self.mean_right_odor
 		self.odor_prev = self.concentration
-		self.grad_prev = self.gradient
-		self.hrc_prev = self.hrc
+		#self.grad_prev = self.gradient
+		#self.hrc_prev = self.hrc
 		self.odor_bin_prev = self.odor_bin
-
-		#RETURN 
-
-
-		if self.filter_all:
-
-			return np.array([self.filt_conc, self.filt_grad, self.filt_hrc, self.intermittency, self.t_L_arr[0], self.t_L_arr[1]])
-
-		else:
-
-			return np.array([self.concentration, self.gradient, self.hrc, self.intermittency, self.t_L_arr[0], self.t_L_arr[1]])
-
 
 	def clear(self):
 		## Reset all values
@@ -233,171 +198,5 @@ class OdorFeatures():
 		self.filt_hrc = 0
 		self.adaptation = 0
 		self.t_whiff = -100.
-		self.t_L_arr = np.array([100.,100+self.dt])
-
-
-
-class OdorFeatures_no_temporal():
-
-
-	def __init__(self, config):
-		self.dt = config['DELTA_T_S']
-		self.can_discretize = True
-		self.clear()
-		self.std_left_box, self.std_right_box = make_L_R_std_box(mm_per_px = config['MM_PER_PX'], antenna_height_mm = config['ANTENNA_LENGTH_MM'], antenna_width_mm = config['ANTENNA_WIDTH_MM'])
-		self.mm_per_px = config['MM_PER_PX']
-		self.use_movie = config['USE_MOVIE']
-		self.num_pts = np.shape(self.std_left_box)[0]
-		self.base_threshold = config['CONCENTRATION_BASE_THRESHOLD']
-		self.max_conc = config['MAX_CONCENTRATION']
-		self.max_hrc = self.max_conc**2
-		self.normalize = config['NORMALIZE_ODOR_FEATURES']
-		self.discretize = config['DISCRETIZE_OBSERVABLES']
-		self.odor_observables = ['concentration', 'gradient', 'motion']
-		self.odor_observable_bounds = np.zeros((len(self.odor_observables), 2))
-
-		if self.normalize:
-
-			self.odor_observable_bounds[0,0] = 0
-			self.odor_observable_bounds[0,1] = 1
-			self.odor_observable_bounds[1,0] = -1
-			self.odor_observable_bounds[1,1] = 1
-			self.odor_observable_bounds[2,0] = -1
-			self.odor_observable_bounds[2,1] = 1
-			
-			self.odor_threshold = self.base_threshold/self.max_conc
-
-		else:
-
-			self.odor_observable_bounds[0,0] = 0
-			self.odor_observable_bounds[0,1] = self.max_conc
-			self.odor_observable_bounds[1,0] = -self.max_conc
-			self.odor_observable_bounds[1,1] = self.max_conc
-			self.odor_observable_bounds[2,0] = -self.max_hrc
-			self.odor_observable_bounds[2,1] = self.max_hrc
-
-			self.odor_threshold = self.base_threshold
-
-
-		self.discretization_index = [2,3,3]
-
-
-
-	def _rotate_and_translate_sensors(self, theta, pos):
-
-		self.left_pts = np.zeros(np.shape(self.std_left_box))
-		self.right_pts = np.zeros(np.shape(self.std_right_box))
-
-		self.left_pts[:,0] = np.cos(theta)*self.std_left_box[:,0] - np.sin(theta)*self.std_left_box[:,1]
-		self.left_pts[:,1] = np.sin(theta)*self.std_left_box[:,0] + np.cos(theta)*self.std_left_box[:,1]
-
-		self.right_pts[:,0] = np.cos(theta)*self.std_right_box[:,0] - np.sin(theta)*self.std_right_box[:,1]
-		self.right_pts[:,1] = np.sin(theta)*self.std_right_box[:,0] + np.cos(theta)*self.std_right_box[:,1]
-
-		pos_arr = np.tile(pos, (self.num_pts,1))
-
-		self.left_pts = self.left_pts + pos_arr
-		self.right_pts = self.right_pts + pos_arr
-
-
-	def _get_left_right_odors(self, odor_frame = None):
-
-		self.left_odors = np.zeros(self.num_pts)
-		self.right_odors = np.zeros(self.num_pts)
-
-		self.left_idxs = np.rint(self.left_pts/self.mm_per_px).astype(int)
-		self.right_idxs = np.rint(self.right_pts/self.mm_per_px).astype(int)
-
-		if self.use_movie:
-
-			try: 
-				self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
-			except IndexError:
-				self.left_odors = np.zeros(self.num_pts)
-
-			try:
-				self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
-			except IndexError:
-				self.right_odors = np.zeros(self.num_pts)
-
-		self.mean_left_odor = np.mean(self.left_odors)
-		self.mean_right_odor = np.mean(self.right_odors)
-
-
-
-	def update(self, theta, pos, odor_frame):
-
-		self._rotate_and_translate_sensors(theta = theta, pos = pos)
-		self._get_left_right_odors(odor_frame=odor_frame)
-		self.concentration = (1/2)*(self.mean_left_odor+self.mean_right_odor)
-		self.hrc = self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor
-		self.gradient = self.mean_left_odor - self.mean_right_odor
-
-		if self.normalize:
-
-			self.concentration = self.concentration/self.max_conc
-			self.gradient = self.gradient/self.max_conc
-			self.hrc = self.hrc/self.max_hrc
-
-			self.comparison_mean_left_odor = self.mean_left_odor/self.max_conc
-			self.comparison_mean_right_odor = self.mean_right_odor/self.max_conc
-
-		else:
-
-			self.comparison_mean_left_odor = self.mean_left_odor
-			self.comparison_mean_right_odor = self.mean_right_odor
-
-
-		if self.discretize:
-
-			self._discretize_fn()
-
-
-		self.left_odor_prev = self.mean_left_odor
-		self.right_odor_prev = self.mean_right_odor
-
-		return np.array([self.concentration, self.gradient, self.hrc])
-
-
-	def _discretize_fn(self):
-
-		self.concentration = (self.concentration > self.odor_threshold).astype(int)
-
-		#for gradient and motion:
-
-		if (self.comparison_mean_left_odor < self.odor_threshold) and (self.comparison_mean_right_odor < self.odor_threshold):
-
-			self.hrc = 0
-			self.gradient = 0
-
-		else:
-
-			if self.gradient > 0:
-
-				self.gradient = 1
-
-			else:
-
-				self.gradient = 2
-
-			if self.hrc > 0:
-
-				self.hrc = 1
-
-			else:
-
-				self.hrc = 2
-
-
-	def clear(self):
-		## Reset all values
-		self.left_odor_prev = 0
-		self.right_odor_prev = 0
-		self.concentration = 0
-		self.gradient = 0
-		self.hrc = 0
-
-
-
-
-
+		self.t_L = 1000.
+		self.odor_bin = False
