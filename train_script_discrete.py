@@ -73,7 +73,7 @@ config_dict['MOVIE_PATH'] = plume_movie_path
 
 environment = FlyNavigator(rng = rng, config = config_dict)
 
-TEMPERATURE = 0.005
+TEMPERATURE = config_dict['SOURCE_REWARD']/200
 
 q_shape = np.append(environment.observation_space.nvec,environment.action_space.n)
 q_table = np.zeros(shape=q_shape)
