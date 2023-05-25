@@ -27,9 +27,9 @@ plume_dict = {
 }
 
 state_dict = {
-    "USE_COSINE_AND_SIN_THETA": True,
-    "DISCRETE_OBSERVABLES": False,
-    "FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
+    "USE_COSINE_AND_SIN_THETA": False,
+    "DISCRETE_OBSERVABLES": True,
+    "FEATURES": ['conc_disc', 'grad_disc', 'hrc_disc'], ## see OdorFeatures class for options,
     "NORMALIZE_ODOR_FEATURES": True,
 	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
@@ -71,7 +71,7 @@ training_dict = {
     "actor_critic_layers": [64, 64], ## MLP layers for actor-critic heads; first dimension should be lstm_hidden_size
     "n_envs": 8, ## number of parallel environments
     "n_steps": 512, ## number of steps per environment per update
-    "model_name": "ppo_recurrent_cont_conc_grad_hrc", ## name of model to save
+    "model_name": "ppo_recurrent_disc_conc_grad_hrc", ## name of model to save
 }
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict}
