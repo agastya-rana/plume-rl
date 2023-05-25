@@ -101,6 +101,7 @@ class FlyNavigator(Env):
 		self.theta_random_bounds = np.array([config['INIT_THETA_MIN'], config['INIT_THETA_MAX']])
 		self.all_episode_rewards = []
 		self.all_episode_success = []
+		self.source_reward = config['SOURCE_REWARD']
 
 		self.initial_max_reset_x = config['INITIAL_MAX_RESET_X_MM']
 		self.reset_x_shift = config['RESET_X_SHIFT_MM']
@@ -220,7 +221,7 @@ class FlyNavigator(Env):
 		in_rad = (x-self.source_location[0])**2 + (y-self.source_location[1])**2 < self.goal_radius ** 2
 		if in_rad:
 			done = True
-			reward = 1
+			reward = self.source_reward
 
 		self.total_episode_reward += reward
 
