@@ -4,6 +4,21 @@ import copy
 class OdorFeatures():
 
 	def __init__(self, config):
+
+		"""
+		The following features have been implemented with their corresponding keys:
+		- concentration (conc)
+		- gradient (grad)
+		- hrc (hrc)
+		- concentration_discrete (conc_disc)
+		- gradient_discrete (grad_disc)
+		- hrc_discrete (hrc_disc)
+		- concentration_left (conc_left)
+		- concentration_right (conc_right)
+		- intermittency (intermittency)
+		- t_L (t_L)		
+		"""
+
 		agent_dict = config['agent']
 		plume_dict = config['plume']
 		state_dict = config['state']

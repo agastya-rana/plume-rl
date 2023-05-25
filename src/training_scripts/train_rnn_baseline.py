@@ -1,9 +1,9 @@
 ## Trains the baseline RNN on the odor plume using PPO on actor-critic MLP heads stemming from the RNN feature extractor
 from src.models.rnn_baseline import *
-from src.models.gym_environment_class import *
-from src.models.base_config import *
+from src.environment.gym_environment_class import *
 import os
 import numpy as np
+from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import VecEnv
 plume_movie_path = os.path.join('.', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 
@@ -56,6 +56,8 @@ agent_dict = {
 }
 
 training_dict = {
+    "model_class": RecurrentPPO,
+    "policy": "MlpLstmPolicy",
     "n_episodes": 10000,
     "max_episode_length": 5000,
     # "lr_schedule": "constant",
@@ -74,20 +76,7 @@ training_dict = {
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict}
 
-
-
-
-## Define the environment here
-rng = np.random.default_rng(seed=0)
-environment = FlyNavigator(rng, config_dict)
-## Define the model to be run
-model = RecurrentPPO("MlpLstmPolicy", environment, verbose=1, n_steps=training_dict["n_steps"], batch_size=training_dict["n_steps"]*training_dict["n_envs"], 
-policy_kwargs={"lstm_hidden_size": training_dict['lstm_hidden_size'], "net_arch": training_dict['actor_critic_layers']},
-gamma=training_dict['gamma'], gae_lambda=training_dict['gae_lambda'], clip_range=training_dict['clip_range'], vf_coef=training_dict['vf_coef'], ent_coef=training_dict['ent_coef'])
-# Train the model
-model.learn(total_timesteps=training_dict['n_episodes']*training_dict['max_episode_length'])
-# Save the model
-model.save(os.path.join('.', 'src', 'models', 'saved_models', training_dict['model_name']))
+model = train_model(config_dict)
 
 ## Test the model
 # Create a single environment for rendering

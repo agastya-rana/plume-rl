@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import time
 
-from src.models.fly_spatial_parameters import FlySpatialParameters
-from src.models.odor_plumes import *
-from src.models.odor_senses import *
+from src.environment.fly_spatial_parameters import FlySpatialParameters
+from src.environment.odor_plumes import *
+from src.environment.odor_senses import *
 
 class FlyNavigator(Env):
 
