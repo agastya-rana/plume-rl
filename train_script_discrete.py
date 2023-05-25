@@ -30,17 +30,19 @@ config_dict = {
 	"WALK_SPEED_MM_PER_S": 10,
 	"DELTA_T_S": 1/60,
 	"PER_STEP_REWARD": 0,
+	"SOURCE_REWARD": 100,
 	"WITH_ORIENTATION": False,
 	"USE_MOVIE": True,
 	"MOVIE_PATH": None,
 	"MIN_FRAME": 500,
-	"STOP_FRAME": 5000,
-	"RESET_FRAME_RANGE": np.array([501,800]),
+	"STOP_FRAME": 600,
+	"RESET_FRAME_RANGE": np.array([501,505]),
 	"SOURCE_LOCATION_MM": np.array([30,90]),
 	"GOAL_RADIUS_MM": 10, #success radius in mm
-	"N_EPISODES" : 10000, # How many independently initialized runs to train on
+	"N_EPISODES" : 3, # How many independently initialized runs to train on
 	"MAX_ALPHA": 0.1, # Learning rate
 	"MIN_ALPHA": 0.001,
+	"SOFTMAX": True,
 	"GAMMA":0.95, # Reward temporal discount factor
 	"MIN_EPSILON":0.01, # Asymptote of decaying exploration rate
 	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
@@ -56,7 +58,8 @@ config_dict = {
 	"EXCESS_TURN_DUR_S": 0.18,
 	"SHIFT_EPISODES": 100,
 	"RESET_X_SHIFT_MM": 5,
-	"RENDER_VIDEO": True
+	"RENDER_VIDEO": True,
+
 
 
 }
@@ -106,9 +109,12 @@ for episode in range(0,config_dict['N_EPISODES']):
 
 		vals = q_table[tuple(obs)]
 
-		#print("vals = ", vals)
+		print("vals = ", vals)
 
 		probs = np.exp(vals/TEMPERATURE)/(np.sum(np.exp(vals/TEMPERATURE)))
+
+		print('probs = ', probs)
+
 		inds = np.arange(0,config_dict['NUM_ACTIONS']).astype(int)
 		action = environment.rng.choice(inds, size = 1, p = probs)
 
