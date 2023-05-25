@@ -9,6 +9,7 @@ Agastya is working on the following tasks to upgrade the codebase:
 * Adding code to simulate more odor plumes
 * Adding parallelization ability; figuring out how to correctly use VecEnv in SB3 to parallelize rollouts.
 * Adding more odor features to the state space as required.
+* Adding functionality to plot metrics of training, e.g. training loss, average rewards over time etc.
 
 If we want to explore different action spaces from the fly (e.g. to conduct 'ablation' studies), it might
 be worth defining new environments.

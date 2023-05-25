@@ -69,9 +69,10 @@ training_dict = {
     "ent_coef": 0.01, ## entropy coefficient in loss factor
     "lstm_hidden_size": 64, ## size of LSTM hidden state
     "actor_critic_layers": [64, 64], ## MLP layers for actor-critic heads; first dimension should be lstm_hidden_size
-    "n_envs": 8, ## number of parallel environments
+    "n_envs": 20, ## number of parallel environments/CPU cores
     "n_steps": 512, ## number of steps per environment per update
-    "model_name": "ppo_recurrent_cont_conc_grad_hrc", ## name of model to save
+    "model_name": "ppo_recurrent_cont_conc_grad_hrc_vec", ## name of model to save
+    "tensorboard_log": "./ppo_recurrent_cont_conc_grad_hrc_vec/", ## directory to save tensorboard logs
 }
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict}
@@ -80,7 +81,8 @@ model = train_model(config_dict)
 
 ## Test the model
 # Create a single environment for rendering
-render_env = gym.make(FlyNavigator(config_dict))
+rng = np.random.default_rng()
+render_env = gym.make(FlyNavigator(rng, config_dict))
 obs = render_env.reset()
 # cell and hidden state of the LSTM
 lstm_states = None

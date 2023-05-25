@@ -205,28 +205,29 @@ class FlyNavigator(Env):
 		ax.fill(rotated_vertices[:, 0], rotated_vertices[:, 1], color=color)
 
 	def render(self, mode='human'):
-		if mode == 'human':
-			# Clear the previous plot
-			self.ax.clear()
-			# Plot odor background in grayscale
-			self.ax.imshow(self.odor_plume.frame.T, cmap='gray', extent=(0, self.odor_plume.frame.shape[0]*self.mm_per_px, 0, self.odor_plume.frame.shape[1]*self.mm_per_px))
-			# Plot the odor source
-			self.ax.scatter(*self.source_location, color='green')
-			## Plot the goal radius
-			self.ax.add_patch(patches.Circle(self.source_location, self.goal_radius, color='green', fill=False))
-			# Plot the current position and orientation of the fly
-			self.draw_pointer(self.ax, self.fly_spatial_parameters.position, self.fly_spatial_parameters.theta, length=10,color='red')
-			#self.ax.scatter(*self.fly_spatial_parameters.position, color='red')
-			#self.ax.add_patch(patches.Arrow(*self.fly_spatial_parameters.position, np.cos(self.fly_spatial_parameters.theta), np.sin(self.fly_spatial_parameters.theta), width=0.5, head_width=4, color='red'))
-			# Plot the trajectory of the fly
-			self.fly_trajectory[self.trajectory_number] = self.fly_spatial_parameters.position
-			self.trajectory_number += 1
-			self.ax.plot(*zip(*self.fly_trajectory), color='cyan')
+	
+		# Clear the previous plot
+		self.ax.clear()
+		# Plot odor background in grayscale
+		self.ax.imshow(self.odor_plume.frame.T, cmap='gray', extent=(0, self.odor_plume.frame.shape[0]*self.mm_per_px, 0, self.odor_plume.frame.shape[1]*self.mm_per_px))
+		# Plot the odor source
+		self.ax.scatter(*self.source_location, color='green')
+		## Plot the goal radius
+		self.ax.add_patch(patches.Circle(self.source_location, self.goal_radius, color='green', fill=False))
+		# Plot the current position and orientation of the fly
+		self.draw_pointer(self.ax, self.fly_spatial_parameters.position, self.fly_spatial_parameters.theta, length=10,color='red')
+		#self.ax.scatter(*self.fly_spatial_parameters.position, color='red')
+		#self.ax.add_patch(patches.Arrow(*self.fly_spatial_parameters.position, np.cos(self.fly_spatial_parameters.theta), np.sin(self.fly_spatial_parameters.theta), width=0.5, head_width=4, color='red'))
+		# Plot the trajectory of the fly
+		self.fly_trajectory[self.trajectory_number] = self.fly_spatial_parameters.position
+		self.trajectory_number += 1
+		self.ax.plot(*zip(*self.fly_trajectory), color='cyan')
 
-			# Set the plot limits
-			self.ax.set_xlim(0, self.odor_plume.frame.shape[0]*self.mm_per_px)
-			self.ax.set_ylim(0, self.odor_plume.frame.shape[1]*self.mm_per_px)
-			
+		# Set the plot limits
+		self.ax.set_xlim(0, self.odor_plume.frame.shape[0]*self.mm_per_px)
+		self.ax.set_ylim(0, self.odor_plume.frame.shape[1]*self.mm_per_px)
+		
+		if mode == 'human':
 			if self.video:
 				# Save current frame to the video file
 				self.fig.canvas.draw() # draw the canvas, cache the renderer
@@ -243,10 +244,16 @@ class FlyNavigator(Env):
 			
 			# Draw the plot
 			#plt.pause(0.0001)
+		
+		elif mode == 'rgb_array':
+			self.fig.canvas.draw()
+			image = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype='uint8')
+			image = image.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+			return image
 
 		else:
 			super(FlyNavigator, self).render(mode=mode)
-		
+	
 	def close(self):
 		if self.video:
 			self.writer.close()
