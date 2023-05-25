@@ -15,7 +15,7 @@ plume_dict = {
 	"MIN_RESET_Y_MM": 0,
 	"MAX_RESET_Y_MM": 180,
     "SHIFT_EPISODES": 100,
-	"RESET_X_SHIFT_MM": 5
+	"RESET_X_SHIFT_MM": 5,
     "INIT_THETA_MIN": 0,
 	"INIT_THETA_MAX": 2*np.pi,
 }
@@ -28,6 +28,7 @@ state_dict = {
 	"THETA_DISCRETIZATION": 6, ## number of bins of discretizing theta
     "NORMALIZE_ODOR_FEATURES": True,
     "TIMESCALES_S": {"FILTER": 0.2, "THRESHOLD": 0.2}, ## timescales for temporal filtering and thresholding of concentration (in adaptive case)
+    "DISCRETE_OBSERVABLES": False, ## whether to use discrete or continuous state space
 }
 
 output_dict = {
@@ -48,8 +49,7 @@ agent_dict = {
     "GOAL_RADIUS_MM": 10, #success radius in mm
 }
 
-training_dict = 
-{
+training_dict = {
     "N_EPISODES": 10000,
     "GAMMA": 0.95, # Reward temporal discount factor
 	"MIN_EPSILON":0.01, # Asymptote of decaying exploration rate

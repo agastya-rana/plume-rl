@@ -10,12 +10,13 @@ class OdorFeatures():
 		self.dt = agent_dict['DELTA_T_S']
 		self.features = state_dict['FEATURES']
 		self.can_discretize = set(self.features).issubset(set(['conc_disc', 'grad_disc', 'hrc_disc']))
-		assert self.can_discretize, "Can only discretize concentration, gradient, and hrc"
+		if state_dict["DISCRETE_OBSERVABLES"]:
+			assert self.can_discretize, "Can only discretize concentration, gradient, and hrc"
 		self.clear()
 
 		self.threshold_style = state_dict['CONCENTRATION_THRESHOLD_STYLE']
 		self.base_threshold = state_dict['CONCENTRATION_BASE_THRESHOLD']
-		self.max_conc = state_dict['MAX_CONCENTRATION']
+		self.max_conc = plume_dict['MAX_CONCENTRATION']
 		timescales = state_dict['TIMESCALES_S']
 		self.tau = timescales['FILTER'] if "FILTER" in timescales else None
 		self.adaptation_tau = timescales['ADAPTATION'] if "ADAPTATION" in timescales else None
@@ -23,11 +24,11 @@ class OdorFeatures():
 
 		self.normalize = state_dict['NORMALIZE_ODOR_FEATURES']
 
-		feature_func_map = {'conc': get_conc, 'grad': get_grad, 'hrc': get_hrc, 'conc_left': get_conc_left, 'conc_right': get_conc_right, 'intermittency': get_intermittency, 't_L': get_t_L, 
-		'conc_disc': get_conc_disc, 'grad_disc': get_grad_disc, 'hrc_disc': get_hrc_disc}
+		feature_func_map = {'conc': self.get_conc, 'grad': self.get_grad, 'hrc': self.get_hrc, 'conc_left': self.get_conc_left, 'conc_right': self.get_conc_right, 'intermittency': self.get_intermittency, 't_L': self.get_t_L, 
+		'conc_disc': self.get_conc_disc, 'grad_disc': self.get_grad_disc, 'hrc_disc': self.get_hrc_disc}
 		bounds_func_map = {'conc': [0, self.max_conc], 'grad': [-self.max_conc, self.max_conc], 'hrc': [-self.max_conc, self.max_conc], 'conc_left': [0, self.max_conc], 
 		'conc_right': [0, self.max_conc], 'intermittency': [0, 1], 't_L': [0, self.max_t_L]}
-		normalize_bounds_func_map = {'conc': [0, 1], 'grad': g[-1, 1], 'hrc': [-1, 1], 'conc_left': [0, 1], 'conc_right': [0, 1], 'intermittency': [0, 1], 't_L': [0, 1]}
+		normalize_bounds_func_map = {'conc': [0, 1], 'grad': [-1, 1], 'hrc': [-1, 1], 'conc_left': [0, 1], 'conc_right': [0, 1], 'intermittency': [0, 1], 't_L': [0, 1]}
 
 		self.mm_per_px = plume_dict['MM_PER_PX']
 		self.std_left_box, self.std_right_box = self._make_L_R_std_box(mm_per_px = self.mm_per_px, antenna_height_mm = agent_dict['ANTENNA_LENGTH_MM'], antenna_width_mm = agent_dict['ANTENNA_WIDTH_MM'])
@@ -39,7 +40,7 @@ class OdorFeatures():
 		num_discrete = lambda x : 3 if x in ['grad_disc', 'hrc_disc'] else 2
 		self.discretization_index = [num_discrete(f) for f in self.features if f in ['conc_disc', 'grad_disc', 'hrc_disc']]
 
-	@static_method
+	@staticmethod
 	def _make_L_R_std_box(mm_per_px, antenna_height_mm, antenna_width_mm):
 
 		"""
@@ -55,20 +56,20 @@ class OdorFeatures():
 
 		x_coords = np.linspace(0, px_width,px_width)*mm_per_px
 		y_coords = np.flip(np.linspace(-px_height/2, px_height/2,px_height)*mm_per_px)
-		
+
 		## Make a big box with meshgrid.
 		big_box = np.zeros((px_height*px_width,2))
 		x_grid, y_grid = np.meshgrid(x_coords, y_coords)
 		big_box = np.column_stack((x_grid.flatten(), y_grid.flatten()))
 
-		# Separate the box into left and right halves.
-    	left_box = big_box[big_box[:, 1] >= 0]
-    	right_box = big_box[big_box[:, 1] <= 0]
+		# Separate the box into left and right halves
+		left_box = big_box[big_box[:, 1] >= 0]
+		right_box = big_box[big_box[:, 1] <= 0]
 
-    	return left_box, right_box
+		return left_box, right_box
 		
 	
-	@static_method
+	@staticmethod
 	def _rotate_points(points, theta):
 		## Assumes that points is a 2D array with x and y coordinates in the first and second columns, respectively.
 		x = np.cos(theta) * points[:, 0] - np.sin(theta) * points[:, 1]

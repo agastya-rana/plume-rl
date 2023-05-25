@@ -38,7 +38,7 @@ class FlyNavigator(Env):
 		self.discrete_obs = state_dict["DISCRETE_OBSERVABLES"]
 
 		if self.use_cos_and_sin:
-			assert not self.discretize_observables, "using sin and cos but trying to discretize; use theta directly instead"
+			assert not self.discrete_obs, "using sin and cos but trying to discretize; use theta directly instead"
 			self.observable_bounds = np.vstack((self.odor_features.feat_bounds, np.array([[-1, 1], [-1, 1]]))) ## bounds for cos and sin theta
 			self.observables = copy.deepcopy(state_dict['FEATURES'])
 			self.observables.append('cos_theta')
@@ -48,7 +48,7 @@ class FlyNavigator(Env):
 			self.observables.append('theta')
 			self.observable_bounds = np.vstack((self.odor_features.feat_bounds, np.array([[0, 2*np.pi]]))) ## bounds for theta
 
-		if self.discretize_theta:
+		if self.discrete_obs:
 			assert self.odor_features.can_discretize, "Set of features used does not have discretization capability"
 			self.theta_discretization = state_dict['THETA_DISCRETIZATION']
 			all_obs_inds = copy.deepcopy(self.odor_features.discretization_index)
@@ -76,7 +76,7 @@ class FlyNavigator(Env):
 		self.max_frames = plume_dict['STOP_FRAME']
 		self.source_location = plume_dict['SOURCE_LOCATION_MM']
 		self.mm_per_px = plume_dict['MM_PER_PX']
-		self.conc_threhold = plume_dict['CONCENTRATION_THRESHOLD']
+		self.conc_threshold = state_dict['CONCENTRATION_BASE_THRESHOLD']
 
 		## Define reset parameters
 		self.min_reset_x = plume_dict['MIN_RESET_X_MM']
@@ -103,16 +103,16 @@ class FlyNavigator(Env):
 		self.episode_incrementer = 0
 		self.trajectory_number = 0
 		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
+		self.record_success = output_dict['RECORD_SUCCESS']
 
 
 	def _add_theta_observation(self):
-
 		if self.use_cos_and_sin:
 			#again, doesn't make sense to use cos and sin if discretizing, so this assumes no discretization
 			self.all_obs[-2] = np.cos(self.fly_spatial_parameters.theta)
 			self.all_obs[-1] = np.sin(self.fly_spatial_parameters.theta)
 		else:
-			if self.discretize_observables:
+			if self.discrete_obs:
 				val = np.digitize(self.fly_spatial_parameters.theta, self.theta_bins)
 				self.all_obs[-1] = val - 1 ## -1 needed because digitize calls fist bin as bin 1 instead of bin 0
 			else:
@@ -177,13 +177,13 @@ class FlyNavigator(Env):
 		else:
 			raise ValueError('Action must be 0, 1, 2, or 3')
 
-		in_rad = (x-self.source_location[0])**2 + (y-self.source_location[1])**2 < self.goal_radius ** 2
+		distance = np.linalg.norm(self.fly_spatial_parameters.position - self.source_location)
 		if distance < self.goal_radius:
 			done = True
 			reward = self.goal_reward
 		self.total_episode_reward += reward
 		if done:
-			if output_dict['RECORD_SUCCESS']:
+			if self.record_success:
 				self.all_episode_rewards.append(self.total_episode_reward)
 				self.all_episode_success.append(1) if reward == 1 else self.all_episode_success.append(0)
 			self.episode_incrementer += 1
