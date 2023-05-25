@@ -107,12 +107,10 @@ class OdorFeatures():
 			try: 
 				self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
 			except IndexError:
-				raise Warning('IndexError in _get_left_right_odors. Setting left_odors to zeros.')
-				self.left_odors = np.zeros(self.num_pts)
+				self.left_odors = np.zeros(self.num_pts) ## If the agent is out of bounds, then the odor is zero.
 			try:
 				self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
 			except IndexError:
-				raise Warning('IndexError in _get_left_right_odors. Setting right_odors to zeros.')
 				self.right_odors = np.zeros(self.num_pts)
 
 		self.mean_left_odor = np.mean(self.left_odors)

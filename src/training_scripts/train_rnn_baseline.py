@@ -12,7 +12,7 @@ plume_dict = {
     "MAX_CONCENTRATION": 255,
     "MOVIE_PATH": plume_movie_path,
 	"MIN_FRAME": 500,
-	"STOP_FRAME": 1000,
+	"STOP_FRAME": 4000,
 	"RESET_FRAME_RANGE": np.array([500, 700]),
 	"SOURCE_LOCATION_MM": np.array([30,90]),
     "MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
@@ -27,18 +27,18 @@ plume_dict = {
 }
 
 state_dict = {
-    "USE_COSINE_AND_SIN_THETA": False,
+    "USE_COSINE_AND_SIN_THETA": True,
+    "DISCRETE_OBSERVABLES": False,
+    "FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
+    "NORMALIZE_ODOR_FEATURES": True,
 	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
-	"FEATURES": ['conc_disc', 'grad_disc', 'hrc_disc'], ## see OdorFeatures class for options
 	"THETA_DISCRETIZATION": 8, ## number of bins of discretizing theta
-    "NORMALIZE_ODOR_FEATURES": True,
-    "TIMESCALES_S": {"FILTER": 0.2, "THRESHOLD": 0.2}, ## timescales for temporal filtering and thresholding of concentration (in adaptive case)
-    "DISCRETE_OBSERVABLES": True
+    "TIMESCALES_S": {"FILTER": 0.2, "THRESHOLD": 0.2} ## timescales for temporal filtering and thresholding of concentration (in adaptive case)
 }
 
 output_dict = {
-    "RENDER_VIDEO": 'trial_disc.mp4', ## name of video file to render to
+    "RENDER_VIDEO": 'rnn_continuous_conc_grad_hrc.mp4', ## name of video file to render to
     'RECORD_SUCCESS': False ## whether to record rewards and number of successful episodes
 }
 
@@ -58,7 +58,7 @@ agent_dict = {
 training_dict = {
     "model_class": RecurrentPPO,
     "policy": "MlpLstmPolicy",
-    "n_episodes": 10000,
+    "n_episodes": 2000,
     "max_episode_length": 5000,
     # "lr_schedule": "constant",
     # "learning_rate": 0.0001,
@@ -70,8 +70,8 @@ training_dict = {
     "lstm_hidden_size": 64, ## size of LSTM hidden state
     "actor_critic_layers": [64, 64], ## MLP layers for actor-critic heads; first dimension should be lstm_hidden_size
     "n_envs": 8, ## number of parallel environments
-    "n_steps": 128, ## number of steps per environment per update
-    "model_name": "ppo_recurrent_disc", ## name of model to save
+    "n_steps": 512, ## number of steps per environment per update
+    "model_name": "ppo_recurrent_cont_conc_grad_hrc", ## name of model to save
 }
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict}
