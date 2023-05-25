@@ -148,7 +148,7 @@ class OdorFeatures():
 		return self.intermittency
 
 	def get_t_L(self, normalize=False):
-		return self.t_now - self.t_whiff if normalize else (self.t_now - self.t_whiff)/self.max_t_L
+		return (self.t_now - self.t_whiff)/self.max_t_L if normalize else self.t_now - self.t_whiff
 	
 	def get_conc_disc(self, normalize=False):
 		return int(self.concentration > self.base_threshold)

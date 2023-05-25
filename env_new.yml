@@ -1,0 +1,20 @@
+name: EmonetLab
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - gym==0.21.0
+  - imageio
+  - imageio-ffmpeg
+  - matplotlib
+  - numpy
+  - pytorch
+  - pip
+  - pip:
+    - importlib-metadata==4.13.0
+    - sb3-contrib==1.8.0
+    - stable-baselines3==1.8.0
+    - setuptools
+prefix: C:\Users\agast\anaconda3\envs\EmonetLab
