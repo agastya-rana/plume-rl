@@ -42,8 +42,11 @@ Project Organization
     │   │
     │   ├── models         <- Code to make plume environments
     │   │    ├── gym_motion_environment_classes.py      <- OpenAI Gym Environment for a moving odor plume
-    │   │    └── motion_environment_factory.py          <- Parameterize motion plume classes by providing a
-    │   │                                                   reward structure, a state space
+    │   │    └── odor_senses.py          <- Generates the odor features available in the state space of the agent.
+    │   │    └── odor_plume.py          <- Generates the odor plume that the agent navigates in.
+    │   │    └── fly_spatial_parameters.py          <- Generates the spatial state space of the fly.
+    │   ├── training_scripts         <- Scripts that train agents using different algorithms.
+    │   │    ├── train_rnn_baseline.py      <- Trains a LSTM model (with Actor-Critic heads) using PPO to navigate the plume
     │   │     
     │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
     │
