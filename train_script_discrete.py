@@ -38,7 +38,7 @@ config_dict = {
 	"RESET_FRAME_RANGE": np.array([501,800]),
 	"SOURCE_LOCATION_MM": np.array([30,90]),
 	"GOAL_RADIUS_MM": 10, #success radius in mm
-	"N_EPISODES" : 2, # How many independently initialized runs to train on
+	"N_EPISODES" : 10000, # How many independently initialized runs to train on
 	"MAX_ALPHA": 0.1, # Learning rate
 	"MIN_ALPHA": 0.001,
 	"GAMMA":0.95, # Reward temporal discount factor
@@ -106,17 +106,17 @@ for episode in range(0,config_dict['N_EPISODES']):
 
 		vals = q_table[tuple(obs)]
 
-		print("vals = ", vals)
+		#print("vals = ", vals)
 
 		probs = np.exp(vals/TEMPERATURE)/(np.sum(np.exp(vals/TEMPERATURE)))
 		inds = np.arange(0,config_dict['NUM_ACTIONS']).astype(int)
 		action = environment.rng.choice(inds, size = 1, p = probs)
 
-		print('action = ', action)
+		#print('action = ', action)
 
 		new_obs, reward, done, info = environment.step(action)
 
-		print('new obs = ', new_obs)
+		#print('new obs = ', new_obs)
 
 		update_index = tuple(np.append(obs, action))
 
@@ -124,7 +124,7 @@ for episode in range(0,config_dict['N_EPISODES']):
 
 		new_vals = q_table[tuple(new_obs)]	
 
-		print('new vals = ', new_vals)
+		#print('new vals = ', new_vals)
 
 		new_probs = np.exp(new_vals/TEMPERATURE)/(np.sum(np.exp(new_vals/TEMPERATURE)))
 		new_exp_val = np.sum(new_probs*new_vals)
@@ -136,6 +136,6 @@ for episode in range(0,config_dict['N_EPISODES']):
 	all_Q[...,episode] = q_table
 
 
-np.save(str(seed)+"_all_Q.npy", all_Q)
-np.save(str(seed)+"_success_history.npy", environment.all_episode_success)
+	np.save(str(seed)+"_all_Q.npy", all_Q)
+	np.save(str(seed)+"_success_history.npy", environment.all_episode_success)
 
