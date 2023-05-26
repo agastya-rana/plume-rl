@@ -228,7 +228,7 @@ class FlyNavigator(Env):
 		if done:
 
 			self.all_episode_rewards.append(self.total_episode_reward)
-			if reward == 1:
+			if reward == self.source_reward:
 				self.all_episode_success.append(1)
 
 			else:
