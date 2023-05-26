@@ -45,7 +45,7 @@ config_dict = {
 	"GAMMA":0.95, # Reward temporal discount factor
 	"MIN_EPSILON":0.01, # Asymptote of decaying exploration rate
 	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
-	"INITIAL_MAX_RESET_X_MM": 300,
+	"INITIAL_MAX_RESET_X_MM": 42,
 	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
 	"MIN_RESET_Y_MM": 0,
 	"MAX_RESET_Y_MM": 180,
@@ -59,7 +59,9 @@ config_dict = {
 	"RESET_X_SHIFT_MM": 5,
 	"RENDER_VIDEO": True
 
+
 }
+
 
 config_dict = {seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
