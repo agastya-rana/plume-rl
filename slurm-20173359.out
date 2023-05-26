@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/gpfs/loomis/apps/avx/software/miniconda/23.1.0/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/gpfs/loomis/apps/avx/software/miniconda/23.1.0/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/vast/palmer/home.grace/asr93/Navigation/plume_rl/src/training_scripts/train_rnn_baseline.py", line 2, in <module>
+    from src.models.rnn_baseline import *
+  File "/vast/palmer/home.grace/asr93/Navigation/plume_rl/src/models/rnn_baseline.py", line 1, in <module>
+    from sb3_contrib import RecurrentPPO
+ModuleNotFoundError: No module named 'sb3_contrib'

@@ -1,0 +1,22 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda deactivate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+['/vast/palmer/home.grace/asr93/Navigation/plume_rl/src/training_scripts', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python310.zip', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/lib-dynload', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages', '/vast/palmer/home.grace/asr93/Navigation/plume_rl']
+Finally imports suceeeded
+/var/spool/slurmd/job20191884/slurm_script: line 13: 14190 Bus error               python src/training_scripts/train_rnn_baseline.py

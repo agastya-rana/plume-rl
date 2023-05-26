@@ -1,8 +1,13 @@
+import sys
+#sys.path.append('../../')
+print(sys.path)
+
 ## Trains the baseline RNN on the odor plume using PPO on actor-critic MLP heads stemming from the RNN feature extractor
 from src.models.rnn_baseline import *
 from src.environment.gym_environment_class import *
 import os
 import numpy as np
+import gym
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import VecEnv
 plume_movie_path = os.path.join('.', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
@@ -38,7 +43,7 @@ state_dict = {
 }
 
 output_dict = {
-    "RENDER_VIDEO": 'rnn_continuous_conc_grad_hrc.mp4', ## name of video file to render to
+    "RENDER_VIDEO": 'rnn_cont.mp4', ## name of video file to render to
     'RECORD_SUCCESS': False ## whether to record rewards and number of successful episodes
 }
 
@@ -58,7 +63,7 @@ agent_dict = {
 training_dict = {
     "model_class": RecurrentPPO,
     "policy": "MlpLstmPolicy",
-    "n_episodes": 2000,
+    "n_episodes": 4000,
     "max_episode_length": 5000,
     # "lr_schedule": "constant",
     # "learning_rate": 0.0001,
@@ -69,33 +74,16 @@ training_dict = {
     "ent_coef": 0.01, ## entropy coefficient in loss factor
     "lstm_hidden_size": 64, ## size of LSTM hidden state
     "actor_critic_layers": [64, 64], ## MLP layers for actor-critic heads; first dimension should be lstm_hidden_size
-    "n_envs": 20, ## number of parallel environments/CPU cores
+    "n_envs": 8, ## number of parallel environments/CPU cores
     "n_steps": 512, ## number of steps per environment per update
-    "model_name": "ppo_recurrent_cont_conc_grad_hrc_vec", ## name of model to save
-    "tensorboard_log": "./ppo_recurrent_cont_conc_grad_hrc_vec/", ## directory to save tensorboard logs
+    "model_name": "ppo_recurrent_cont", ## name of model to save
+    "tensorboard_log": "./logs/ppo_recurrent_cont/", ## directory to save tensorboard logs
 }
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict}
 
-model = train_model(config_dict)
-
-## Test the model
-# Create a single environment for rendering
-rng = np.random.default_rng()
-render_env = gym.make(FlyNavigator(rng, config_dict))
-obs = render_env.reset()
-# cell and hidden state of the LSTM
-lstm_states = None
-# Episode start signal
-episode_start = True
-for _ in range(3000):
-    action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
-    obs, _, done, _ = render_env.step(action)
-    render_env.render()
-    # If the episode is done, reset the environment (for vector environments, we don't need to reset manually)
-    if done:
-        obs = render_env.reset()
-        episode_start = True
-    else:
-        episode_start = False
-render_env.close()
+if __name__ == "__main__":
+    ## Train the model
+    model = train_model(config_dict)
+    ## Test the model
+    test_model(model, config_dict)

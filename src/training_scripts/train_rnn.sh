@@ -1,14 +1,12 @@
 #!/bin/bash
 #SBATCH --partition=day
-#SBATCH --job-name=rnn_training_vec
-#SBATCH --mem-per-cpu=3G
-#SBATCH --cpus-per-task=20
+#SBATCH --job-name=rnn_cont_4k
+#SBATCH --mem-per-cpu=42G
+#SBATCH --cpus-per-task=8
 #SBATCH --open-mode=append
-#SBATCH --time=20:00:00
+#SBATCH --time=24:00:00
 #SBATCH --mail-type=ALL
 
-module load StdEnv
-module load miniconda
-source /gpfs/loomis/apps/avx/software/miniconda/23.1.0/etc/profile.d/conda.sh
+eval "$(conda shell.bash hook)"
 conda activate EmonetLab
-python -m src.training_scripts.train_rnn_baseline
+python src/training_scripts/train_rnn_baseline.py

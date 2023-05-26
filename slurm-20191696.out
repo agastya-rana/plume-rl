@@ -1,0 +1,1 @@
+/var/spool/slurmd/job20191696/slurm_script: line 12: 17397 Bus error               python src/training_scripts/train_rnn_baseline.py

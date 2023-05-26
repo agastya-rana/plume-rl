@@ -1,0 +1,4 @@
+['/vast/palmer/home.grace/asr93/Navigation/plume_rl/src/training_scripts', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python310.zip', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/lib-dynload', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages', '/vast/palmer/home.grace/asr93/Navigation/plume_rl']
+Finally imports suceeeded
+/var/spool/slurmd/job20191925/slurm_script: line 12: 30571 Killed                  python src/training_scripts/train_rnn_baseline.py
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=20191925.batch. Some of your processes may have been killed by the cgroup out-of-memory handler.

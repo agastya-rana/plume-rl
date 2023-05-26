@@ -1,6 +1,8 @@
 from sb3_contrib import RecurrentPPO
 from src.environment.gym_environment_class import *
 from stable_baselines3.common.vec_env import SubprocVecEnv
+import os
+import numpy as np
 
 # Helper function to create environments
 def make_env(i, config_dict):
@@ -29,3 +31,23 @@ def train_model(config):
     # Save the model
     model.save(os.path.join('.', 'src', 'trained_models', training_dict['model_name']))
     return model
+
+def test_model(model, config):
+    rng = np.random.default_rng(seed=1)
+    render_env = FlyNavigator(rng, config)
+    obs = render_env.reset()
+    # cell and hidden state of the LSTM
+    lstm_states = None
+    # Episode start signal
+    episode_start = True
+    for _ in range(3000):
+        action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
+        obs, _, done, _ = render_env.step(action)
+        render_env.render()
+        # If the episode is done, reset the environment (for vector environments, we don't need to reset manually)
+        if done:
+            obs = render_env.reset()
+            episode_start = True
+        else:
+            episode_start = False
+    render_env.close()
