@@ -63,7 +63,7 @@ agent_dict = {
 training_dict = {
     "model_class": RecurrentPPO,
     "policy": "MlpLstmPolicy",
-    "n_episodes": 4000,
+    "n_episodes": 20,
     "max_episode_length": 5000,
     # "lr_schedule": "constant",
     # "learning_rate": 0.0001,
