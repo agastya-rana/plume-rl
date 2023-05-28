@@ -1,6 +1,7 @@
 from src.models.odor_senses import *
 from src.models.gym_environment_class import FlyNavigator
 #from stable_baselines3.deepq.policies import MlpPolicy
+from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3 import DQN
 import stable_baselines3.common.utils
 
@@ -45,7 +46,7 @@ config_dict = {
 	"GAMMA":0.95, # Reward temporal discount factor
 	"MIN_EPSILON":0.01, # Asymptote of decaying exploration rate
 	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
-	"INITIAL_MAX_RESET_X_MM": 42,
+	"INITIAL_MAX_RESET_X_MM":300,
 	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
 	"MIN_RESET_Y_MM": 0,
 	"MAX_RESET_Y_MM": 180,
@@ -57,13 +58,10 @@ config_dict = {
 	"EXCESS_TURN_DUR_S": 0.18,
 	"SHIFT_EPISODES": 100,
 	"RESET_X_SHIFT_MM": 5,
-	"RENDER_VIDEO": True
+	"RENDER_VIDEO": True}
 
 
-}
-
-
-config_dict = {seed = int(sys.argv[1])
+seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
 plume_movie_path = os.path.join('..','src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 
@@ -72,12 +70,16 @@ config_dict['MOVIE_PATH'] = plume_movie_path
 
 env = FlyNavigator(rng = rng, config = config_dict)
 
-model_idx = 8
+#model_idx = 8
 
-model = DQN.load('models/'+str(model_idx)+"after_99990000")
+model = DQN.load('models/'+"after_99990000")
 
-mean_reward, _ = model.evaluate(env, n_eval_episodes=200)
+mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
 
-print('success rate = ', mean_reward)
+mean_reward = np.array([mean_reward])
+
+np.savetxt(str(seed)+"_success_rate.txt", mean_reward) 
+
+#print('success rate = ', mean_reward)
 
 
