@@ -77,10 +77,12 @@ logdir = 'logs_second_round'
 
 learning_rate = stable_baselines3.common.utils.get_linear_fn(start = config_dict['MAX_ALPHA'], end = config_dict['MIN_ALPHA'], end_fraction = 2/3)
 
-model = DQN.load('models/'str(seed)+"_after_99990000")
+model = DQN.load('models/'+str(seed)+"_after_99990000")
 
 model.learning_rate = learning_rate
 model.tensorboard_log = logdir
+model.exploration_initial_eps = 0.05
+model.exploration_fraction = 0.25
 
 #make these directories
 
