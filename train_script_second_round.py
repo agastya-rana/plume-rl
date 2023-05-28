@@ -3,6 +3,7 @@ from src.models.gym_environment_class import FlyNavigator
 #from stable_baselines3.deepq.policies import MlpPolicy
 from stable_baselines3 import DQN
 import stable_baselines3.common.utils
+from stable_baselines3.common.envs import DummyVecEnv
 
 import numpy as np 
 #from stable_baselines3 import DQN
@@ -69,6 +70,7 @@ plume_movie_path = os.path.join('..','src', 'data', 'plume_movies', 'intermitten
 config_dict['MOVIE_PATH'] = plume_movie_path
 
 env = FlyNavigator(rng = rng, config = config_dict)
+env = DummyVecEnv([lambda: env])
 
 num_steps = config_dict['STOP_FRAME']*config_dict['N_EPISODES']
 
@@ -77,7 +79,7 @@ logdir = 'logs_second_round'
 
 learning_rate = stable_baselines3.common.utils.get_linear_fn(start = config_dict['MAX_ALPHA'], end = config_dict['MIN_ALPHA'], end_fraction = 2/3)
 
-model = DQN.load('models/'+str(seed)+"_after_99990000")
+model = DQN.load('models/'+str(seed)+"_after_99990000", env = env)
 
 model.learning_rate = learning_rate
 model.tensorboard_log = logdir
