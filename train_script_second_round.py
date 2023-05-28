@@ -3,7 +3,7 @@ from src.models.gym_environment_class import FlyNavigator
 #from stable_baselines3.deepq.policies import MlpPolicy
 from stable_baselines3 import DQN
 import stable_baselines3.common.utils
-from stable_baselines3.common.envs import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv
 
 import numpy as np 
 #from stable_baselines3 import DQN
