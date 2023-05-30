@@ -96,14 +96,26 @@ q_table = np.zeros(shape=q_shape)
 #print(q_shape)
 
 
-fraction = 3/4
+alpha_fraction = 3/4
 alpha_arr = np.zeros(config_dict['N_EPISODES'])
-change_num = int(config_dict['N_EPISODES']*fraction)
-inds = np.arange(0,change_num)
+alpha_change_num = int(config_dict['N_EPISODES']*alpha_fraction)
 
-alpha_vals = config_dict['MAX_ALPHA'] - (config_dict['MAX_ALPHA']-config_dict['MIN_ALPHA'])/change_num * inds
-alpha_arr[0:change_num] = alpha_vals
-alpha_arr[change_num:] = config_dict['MIN_ALPHA'] 
+epsilon_fraction = 0.3
+epsilon_arr = np.zeros(config_dict['N_EPISODES'])
+epsilon_change_num = int(config_dict['N_EPISODES']*epsilon_fraction)
+
+alpha_inds = np.arange(0, alpha_change_num)
+epsilon_inds = np.arange(0, epsilon_change_num)
+
+alpha_vals = config_dict['MAX_ALPHA'] - (config_dict['MAX_ALPHA']-config_dict['MIN_ALPHA'])/alpha_change_num * alpha_inds
+epsilon_vals = 1 - (1-config_dict['MIN_EPSILON'])/epsilon_change_num * epsilon_inds
+
+
+alpha_arr[0:alpha_change_num] = alpha_vals
+alpha_arr[alpha_change_num:] = config_dict['MIN_ALPHA'] 
+
+epsilon_arr[0:epsilon_change_num] = epsilon_vals
+epsilon_arr[epsilon_change_num:] = config_dict['MIN_EPSILON']
 
 #episode_incrementer = 0
 
@@ -119,26 +131,28 @@ for episode in range(0,config_dict['N_EPISODES']):
 
 	done = False
 
-	all_nonzero = q_table.flatten()[q_table.flatten()!=0]
+	ranfs = environment.rng.uniform(size = config_dict['STOP_FRAME'])
+	alpha = alpha_arr[episode]
+	epsilon = epsilon_arr[episode]
+	inds = np.arange(0,config_dict['NUM_ACTIONS']).astype(int)
 
-	if len(all_nonzero) > 0:
-
-		TEMPERATURE = np.median(all_nonzero)
-
-	else:
-
-		TEMPERATURE = 1
+	count = 0
 
 	while not done:
 
-		alpha = alpha_arr[episode]
-
 		vals = q_table[tuple(obs)]
 
-		probs = np.exp(vals/TEMPERATURE)/(np.sum(np.exp(vals/TEMPERATURE)))
+		rand_unif = ranfs[count]
+		explore = epsilon < rand_unif
 
-		inds = np.arange(0,config_dict['NUM_ACTIONS']).astype(int)
-		action = environment.rng.choice(inds, size = 1, p = probs)
+		if explore:
+
+			action = environment.rng.choice(inds)
+
+		else:
+
+			possible_actions = np.argwhere(vals==np.amax(vals))
+			action = environment.rng.choice(possible_actions)
 
 		#print('action = ', action)
 
@@ -153,13 +167,13 @@ for episode in range(0,config_dict['N_EPISODES']):
 		new_vals = q_table[tuple(new_obs)]	
 
 		#print('new vals = ', new_vals)
+		max_val = np.amax(new_vals)
 
-		new_probs = np.exp(new_vals/TEMPERATURE)/(np.sum(np.exp(new_vals/TEMPERATURE)))
-		new_exp_val = np.sum(new_probs*new_vals)
-
-		q_table[update_index] = (1-alpha)*q_table[update_index] + alpha*(reward + config_dict['GAMMA']*new_exp_val)
+		q_table[update_index] = (1-alpha)*q_table[update_index] + alpha*(reward + config_dict['GAMMA']*max_val)
 
 		obs = new_obs
+
+		count+=1
 
 	all_Q[...,episode] = q_table
 
