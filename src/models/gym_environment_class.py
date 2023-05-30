@@ -87,7 +87,7 @@ class FlyNavigator(Env):
 		self.goal_radius = config['GOAL_RADIUS_MM']
 		self.source_location = config['SOURCE_LOCATION_MM']
 		self.dt = config['DELTA_T_S']
-		self.per_step_reward = config['PER_STEP_REWARD']
+		
 		self.rng = rng
 		self.config = config
 		self.max_frames = config['STOP_FRAME']
@@ -101,10 +101,25 @@ class FlyNavigator(Env):
 		self.theta_random_bounds = np.array([config['INIT_THETA_MIN'], config['INIT_THETA_MAX']])
 		self.all_episode_rewards = []
 		self.all_episode_success = []
-		self.source_reward = config['SOURCE_REWARD']
+		#self.source_reward = config['SOURCE_REWARD']
 
 		self.initial_max_reset_x = config['INITIAL_MAX_RESET_X_MM']
 		self.reset_x_shift = config['RESET_X_SHIFT_MM']
+
+		reward_dict = config['reward_dict']
+		self.source_reward = reward_dict['SOURCE_REWARD']
+		self.per_step_reward = reward_dict['PER_STEP_REWARD']
+		self.impose_walls = reward_dict['IMPOSE_WALLS']
+		if self.impose_walls:
+			self.wall_penalty = reward_dict['WALL_PENALTY']
+			self.wall_max_x = reward_dict['WALL_MAX_X_MM']
+			self.wall_min_x = reward_dict['WALL_MIN_X_MM']
+			self.wall_min_y = reward_dict['WALL_MIN_Y_MM']
+			self.wall_max_y = reward_dict['WALL_MAX_Y_MM']
+
+		self.use_radial_reward = reward_dict['USE_RADIAL_REWARD']
+		if self.use_radial_reward:
+			self.radial_reward_scale = reward_dict['RADIAL_REWARD_SCALE']
 
 		self.x_random_bounds = np.array([self.min_reset_x, self.initial_max_reset_x])
 		self.y_random_bounds = np.array([self.min_reset_y, self.max_reset_y])
@@ -158,6 +173,7 @@ class FlyNavigator(Env):
 		self.all_obs = np.zeros(self.obs_dim)
 		self.all_obs[0:self.num_odor_obs] = odor_obs
 		self._add_theta_observation()
+		self.previous_distance = np.linalg.norm(self.fly_spatial_parameters.position-self.source_location)
 
 		if self.discretize_observables:
 
@@ -180,12 +196,11 @@ class FlyNavigator(Env):
 
 			self.all_obs = np.zeros(self.obs_dim)
 			self.all_obs[0:self.num_odor_obs] = odor_obs
-			#all_obs[-1] = self.fly_spatial_parameters.theta
 			reward = self.per_step_reward
 			if self.odor_plume.frame_number >= self.max_frames:		
-				done = True
+				self.done = True
 			else:
-				done = False
+				self.done = False
 
 		## Deal with actions that involve turning (1 is left, 2 is right)
 		elif action == 1 or action == 2:
@@ -206,26 +221,19 @@ class FlyNavigator(Env):
 				self.all_obs[0:self.num_odor_obs] = odor_obs
 
 				if self.odor_plume.frame_number >= self.max_frames:				
-					done = True
+					self.done = True
 					break				
 				else:
-					done = False
+					self.done = False
 			self.num_turns += 1
 		else:
 			raise ValueError('Action must be 0, 1, 2, or 3')
 
 
-		x = self.fly_spatial_parameters.position[0]
-		y = self.fly_spatial_parameters.position[1]
+		additional_rewards = self._get_additional_rewards()
+		reward += additional_rewards
 
-		in_rad = (x-self.source_location[0])**2 + (y-self.source_location[1])**2 < self.goal_radius ** 2
-		if in_rad:
-			done = True
-			reward = self.source_reward
-
-		self.total_episode_reward += reward
-
-		if done:
+		if self.done:
 
 			self.all_episode_rewards.append(self.total_episode_reward)
 			if reward == self.source_reward:
@@ -244,7 +252,7 @@ class FlyNavigator(Env):
 
 		info = {}
 
-		return self.all_obs, reward, done, info
+		return self.all_obs, reward, self.done, info
 
 	def draw_pointer(self, ax, position, angle, length=1.0, color='red'):
 		# Calculate the vertices of the triangle
@@ -306,6 +314,50 @@ class FlyNavigator(Env):
 			if self.video:
 				self.writer.close()
 			super(FlyNavigator, self).close()
+
+
+	def _get_additional_rewards(self):
+
+		pos = self.fly_spatial_parameters.position
+		current_distance = np.linalg.norm(pos-self.source_location) 
+
+		source_check = current_distance < self.goal_radius #checking if within source radius
+
+		if source_check:
+
+			self.done = True
+			reward = self.source_reward
+			return reward
+
+
+		if self.impose_walls:
+
+			outside_bool = (pos[0] > self.wall_max_x) + (pos[0] < self.wall_min_x) + (pos[1] > self.wall_max_y) + (pos[1] < self.wall_min_y) #checking if out of bounds
+
+			if outside_bool:
+
+				reward = self.wall_penalty
+				self.done = True
+
+				return reward
+
+		if self.use_radial_reward: #for giving reward for decreasing distance from source
+
+			non_zero_check = self.all_obs[0:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
+			non_zero_check = np.sum(non_zero_check)>0
+
+
+			reward = self.radial_reward_scale*(self.previous_distance-current_distance)*non_zero_check
+			self.previous_distance = copy.deepcopy(current_distance)
+			return reward
+
+
+		return 0
+
+
+
+
+
 
 
 

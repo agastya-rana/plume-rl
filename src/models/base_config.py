@@ -1,6 +1,7 @@
 ##File for base RL training configuration parameters:
 ##Dictionary should be imported only by run script and specific parameters changed there
-import numpy as np 
+import numpy as np
+from src.models.odor_senses import OdorFeatures 
 
 
 config_dict = {
@@ -48,7 +49,7 @@ config_dict = {
 	"MIN_TURN_DUR_S": 0.18,
 	"EXCESS_TURN_DUR_S": 0.18,
 	"SHIFT_EPISODES": 100,
-	"RESET_X_SHIFT_MM": 5
+	"RESET_X_SHIFT_MM": 5,
 	"RENDER_VIDEO": True,
 
 
