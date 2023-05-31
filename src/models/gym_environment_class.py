@@ -154,6 +154,8 @@ class FlyNavigator(Env):
 	def reset(self):
 		## Reset method in gym returns the initial observation (state) of the environment
 		self.total_episode_reward = 0
+		self.reached_source = False
+		self.done = False
 		flip = self.rng.choice(np.array([0,1])).astype(bool)
 		self.odor_plume.reset(flip = flip, rng = self.rng)
 		self.turn_durs = self.min_turn_dur + self.rng.exponential(scale = self.excess_turn_dur, size = self.max_frames)
