@@ -11,13 +11,28 @@ import time
 import sys 
 import os
 
+reward_dict = {
+	
+	"SOURCE_REWARD": 1,
+	"PER_STEP_REWARD": 0,
+	"IMPOSE_WALLS": False,
+	"WALL_PENALTY": 0,
+	"WALL_MAX_X_MM": 330,
+	"WALL_MIN_X_MM": -10,
+	"WALL_MIN_Y_MM": 0,
+	"WALL_MAX_Y_MM": 180,
+	"USE_RADIAL_REWARD": False,
+	"RADIAL_REWARD_SCALE": 0,
+
+}
+
 config_dict = {
 	
 	"NUM_ACTIONS": 4,
 	"USE_COSINE_AND_SIN_THETA": True,
 	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
-	"ODOR_FEATURES_CLASS": OdorFeatures,
+	"ODOR_FEATURES_CLASS": OdorFeatures_no_temporal,
 	"DISCRETIZE_OBSERVABLES": False,
 	"THETA_DISCRETIZATION": 6,
 	"TEMPORAL_FILTER_TIMESCALE_S": 1,
@@ -30,9 +45,6 @@ config_dict = {
 	"NORMALIZE_ODOR_FEATURES": True,
 	"WALK_SPEED_MM_PER_S": 10,
 	"DELTA_T_S": 1/60,
-	"PER_STEP_REWARD": 0,
-	"SOURCE_REWARD": 1,
-	"WITH_ORIENTATION": False,
 	"USE_MOVIE": True,
 	"MOVIE_PATH": None,
 	"MIN_FRAME": 500,
@@ -42,11 +54,11 @@ config_dict = {
 	"GOAL_RADIUS_MM": 10, #success radius in mm
 	"N_EPISODES" : 10000, # How many independently initialized runs to train on
 	"MAX_ALPHA": 0.1, # Learning rate
-	"MIN_ALPHA": 0.0001,
-	"GAMMA":0.95, # Reward temporal discount factor
+	"MIN_ALPHA": 0.001,
+	"GAMMA":0.99, # Reward temporal discount factor
 	"MIN_EPSILON":0.01, # Asymptote of decaying exploration rate
 	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
-	"INITIAL_MAX_RESET_X_MM":300,
+	"INITIAL_MAX_RESET_X_MM": 300,
 	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
 	"MIN_RESET_Y_MM": 0,
 	"MAX_RESET_Y_MM": 180,
@@ -58,7 +70,11 @@ config_dict = {
 	"EXCESS_TURN_DUR_S": 0.18,
 	"SHIFT_EPISODES": 100,
 	"RESET_X_SHIFT_MM": 5,
-	"RENDER_VIDEO": True}
+	"RENDER_VIDEO": True,
+	"reward_dict": reward_dict
+
+
+}
 
 
 seed = int(sys.argv[1])
@@ -72,9 +88,9 @@ env = FlyNavigator(rng = rng, config = config_dict)
 
 #model_idx = 8
 
-model = DQN.load('models/'+"after_99990000")
+model = DQN.load('models/'+str(seed)+"after_99990000")
 
-mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=10)
+mean_reward, _ = evaluate_policy(model, env, n_eval_episodes=100)
 
 mean_reward = np.array([mean_reward])
 
