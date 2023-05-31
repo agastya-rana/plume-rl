@@ -234,6 +234,8 @@ class FlyNavigator(Env):
 		additional_rewards = self._get_additional_rewards()
 		reward += additional_rewards
 
+		self.total_episode_reward+=reward
+
 		if self.done:
 
 			self.all_episode_rewards.append(self.total_episode_reward)
