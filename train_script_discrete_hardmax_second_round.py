@@ -10,6 +10,7 @@ import time
 import sys 
 import os
 
+
 reward_dict = {
 	
 	"SOURCE_REWARD": 500,
@@ -77,6 +78,8 @@ config_dict = {
 
 }
 
+
+
 seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
 plume_movie_path = os.path.join('..','src', 'data', 'plume_movies', 'intermittent_smoke.avi')
@@ -90,14 +93,14 @@ environment = FlyNavigator(rng = rng, config = config_dict)
 
 q_shape = np.append(environment.observation_space.nvec,environment.action_space.n)
 q_table = np.load(str(seed)+"_all_Q.npy")[...,-1]
-#print(q_shape) 
+#print(q_shape)
+alpha = config_dict['MIN_ALPHA']
+epsilon = config_dict['MIN_EPSILON']
 
 #episode_incrementer = 0
 
 all_Q_shape = np.append(q_shape, config_dict['N_EPISODES'])
 all_Q = np.zeros(all_Q_shape)
-
-alpha = config_dict['MIN_ALPHA']
 
 for episode in range(0,config_dict['N_EPISODES']):
 
@@ -108,24 +111,26 @@ for episode in range(0,config_dict['N_EPISODES']):
 
 	done = False
 
-	all_nonzero = q_table.flatten()[q_table.flatten()!=0]
+	ranfs = environment.rng.uniform(size = config_dict['STOP_FRAME'])
+	inds = np.arange(0,config_dict['NUM_ACTIONS']).astype(int)
 
-	if len(all_nonzero) > 0:
-
-		TEMPERATURE = np.median(all_nonzero)
-
-	else:
-
-		TEMPERATURE = 1
+	count = 0
 
 	while not done:
 
 		vals = q_table[tuple(obs)]
 
-		probs = np.exp(vals/TEMPERATURE)/(np.sum(np.exp(vals/TEMPERATURE)))
+		rand_unif = ranfs[count]
+		explore = epsilon < rand_unif
 
-		inds = np.arange(0,config_dict['NUM_ACTIONS']).astype(int)
-		action = environment.rng.choice(inds, size = 1, p = probs)
+		if explore:
+
+			action = environment.rng.choice(inds)
+
+		else:
+
+			possible_actions = np.argwhere(vals==np.amax(vals))
+			action = environment.rng.choice(possible_actions)
 
 		#print('action = ', action)
 
@@ -140,17 +145,17 @@ for episode in range(0,config_dict['N_EPISODES']):
 		new_vals = q_table[tuple(new_obs)]	
 
 		#print('new vals = ', new_vals)
+		max_val = np.amax(new_vals)
 
-		new_probs = np.exp(new_vals/TEMPERATURE)/(np.sum(np.exp(new_vals/TEMPERATURE)))
-		new_exp_val = np.sum(new_probs*new_vals)
-
-		q_table[update_index] = (1-alpha)*q_table[update_index] + alpha*(reward + config_dict['GAMMA']*new_exp_val)
+		q_table[update_index] = (1-alpha)*q_table[update_index] + alpha*(reward + config_dict['GAMMA']*max_val)
 
 		obs = new_obs
+
+		count+=1
 
 	all_Q[...,episode] = q_table
 
 
 	np.save(str(seed)+"_all_Q_second_round.npy", all_Q)
 	np.save(str(seed)+"_success_history_second_round.npy", environment.all_episode_success)
-	np.save(str(seed)+"_all_reward_history_second_round.npy", environment.all_episode_rewards)
+
