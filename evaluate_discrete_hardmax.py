@@ -95,6 +95,8 @@ q_table = np.load(str(seed)+"_all_Q.npy")[...,-1]
 
 all_success = np.zeros(config_dict['N_EPISODES'])
 
+epsilon = 0.01
+
 for episode in range(0,config_dict['N_EPISODES']):
 
 	obs = environment.reset()
@@ -104,6 +106,7 @@ for episode in range(0,config_dict['N_EPISODES']):
 
 	done = False
 	inds = np.arange(0,config_dict['NUM_ACTIONS']).astype(int)
+	ranfs = environment.rng.uniform(size = config_dict['STOP_FRAME'])
 
 	count = 0
 
@@ -111,8 +114,17 @@ for episode in range(0,config_dict['N_EPISODES']):
 
 		vals = q_table[tuple(obs)]
 
-		possible_actions = np.argwhere(vals==np.amax(vals))
-		action = environment.rng.choice(possible_actions)
+		rand_unif = ranfs[count]
+		explore = epsilon < rand_unif
+
+		if explore:
+
+			action = environment.rng.choice(inds)
+
+		else:
+
+			possible_actions = np.argwhere(vals==np.amax(vals))
+			action = environment.rng.choice(possible_actions)
 
 		#print('action = ', action)
 
@@ -125,5 +137,5 @@ for episode in range(0,config_dict['N_EPISODES']):
 
 		all_success[episode] = 1
 
-np.savetxt(str(seed)+"_eval_all_success.txt", all_success)
+np.savetxt(str(seed)+"_eval_all_success_second_round_001.txt", all_success)
 
