@@ -88,12 +88,14 @@ success_arr = np.zeros(config_dict['N_EPISODES'])
 
 num_cols = 7
 
-data_arr = np.zeros(num_cols)
+data_arr = np.zeros((4500,num_cols,config_dict['N_EPISODES']))
 
 for episode in range(0, config_dict['N_EPISODES']):
 
 	obs = env.reset()
 	done = False
+
+	count = 0
 
 	while not done:
 
@@ -105,15 +107,19 @@ for episode in range(0, config_dict['N_EPISODES']):
 		new_row[4] = action
 		new_row[5:] = env.fly_spatial_parameters.position
 
-		data_arr = np.vstack((data_arr, new_row))
+		data_arr[count,:,episode] = new_row
 
 		obs, reward, done, info = env.step(action)
+
+		count+=1
 
 	if env.reached_source:
 
 		success_arr[episode] = 1
 
-data_arr = data_arr[1:,:]
+	if count<4500:
+
+		data_arr[count:,:,episode] = np.nan
 
 np.save(str(seed)+"_data_arr.npy", data_arr)
 np.save(str(seed)+"_success_arr.npy", success_arr)
