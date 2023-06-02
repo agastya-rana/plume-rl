@@ -153,9 +153,9 @@ class FlyNavigator(Env):
 			self.x_random_bounds = np.array([self.min_reset_x, max_reset_x])
 		self.fly_spatial_parameters.randomize_parameters(rng=self.rng, x_bounds=self.x_random_bounds, y_bounds=self.y_random_bounds, 
 			theta_bounds = self.theta_random_bounds, valid_locations=valid_locations) ## Randomize the fly's initial position and orientation
-
 		self.odor_features.clear() ## Clear the odor features
 		self._update_state() ## Update the state
+		self.previous_distance = np.linalg.norm(self.fly_spatial_parameters.position-self.source_location)
 		return self.all_obs
 
 	def _update_state(self):
@@ -277,9 +277,9 @@ class FlyNavigator(Env):
 		super(FlyNavigator, self).close()
 
 	def _get_additional_rewards(self):
-				
-		
-		current_distance = np.linalg.norm(self.fly_spatial_parameters.position - self.source_location)
+		# Get the current distance from the source
+		pos = self.fly_spatial_parameters.position
+		current_distance = np.linalg.norm(pos - self.source_location)
 		if current_distance < self.goal_radius:
 			self.done = True
 			self.reached_source = True

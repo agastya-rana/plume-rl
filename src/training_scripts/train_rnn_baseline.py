@@ -17,7 +17,7 @@ plume_dict = {
     "MAX_CONCENTRATION": 255,
     "MOVIE_PATH": plume_movie_path,
 	"MIN_FRAME": 500,
-	"STOP_FRAME": 4000,
+	"STOP_FRAME": 1000,
 	"RESET_FRAME_RANGE": np.array([500, 700]),
 	"SOURCE_LOCATION_MM": np.array([30,90]),
     "MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
@@ -39,7 +39,8 @@ state_dict = {
 	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
 	"THETA_DISCRETIZATION": 8, ## number of bins of discretizing theta
-    "TIMESCALES_S": {"FILTER": 0.2, "THRESHOLD": 0.2} ## timescales for temporal filtering and thresholding of concentration (in adaptive case)
+    "TIMESCALES_S": {"FILTER": 0.2, "THRESHOLD": 0.2}, ## timescales for temporal filtering and thresholding of concentration (in adaptive case)
+    "FIX_ANTENNA": False, ## whether to fix the antenna to pointing upwind
 }
 
 output_dict = {
@@ -58,6 +59,19 @@ agent_dict = {
     "PER_STEP_REWARD": -1,
     "GOAL_REWARD": 1000,
     "GOAL_RADIUS_MM": 10, #success radius in mm
+}
+
+reward_dict = {
+	"SOURCE_REWARD": 500,
+	"PER_STEP_REWARD": -1/60,
+	"IMPOSE_WALLS": True,
+	"WALL_PENALTY": -20,
+	"WALL_MAX_X_MM": 330,
+	"WALL_MIN_X_MM": -10,
+	"WALL_MIN_Y_MM": 0,
+	"WALL_MAX_Y_MM": 180,
+	"USE_RADIAL_REWARD": True,
+	"RADIAL_REWARD_SCALE": 5,
 }
 
 training_dict = {
@@ -80,7 +94,7 @@ training_dict = {
     "tensorboard_log": "./logs/ppo_recurrent_cont/", ## directory to save tensorboard logs
 }
 
-config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict}
+config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}
 
 if __name__ == "__main__":
     ## Train the model
