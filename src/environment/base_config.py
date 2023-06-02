@@ -50,6 +50,20 @@ agent_dict = {
     "GOAL_RADIUS_MM": 10, #success radius in mm
 }
 
+reward_dict = {
+	"SOURCE_REWARD": 500,
+	"PER_STEP_REWARD": -1/60,
+	"IMPOSE_WALLS": True,
+	"WALL_PENALTY": -20,
+	"WALL_MAX_X_MM": 330,
+	"WALL_MIN_X_MM": -10,
+	"WALL_MIN_Y_MM": 0,
+	"WALL_MAX_Y_MM": 180,
+	"USE_RADIAL_REWARD": True,
+	"RADIAL_REWARD_SCALE": 5,
+}
+
+
 training_dict = {
     "N_EPISODES": 10000,
     "GAMMA": 0.95, # Reward temporal discount factor
@@ -58,4 +72,4 @@ training_dict = {
 	"MIN_ALPHA": 0.0001, # Learning rate
 }
 
-config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict}
+config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}

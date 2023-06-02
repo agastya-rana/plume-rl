@@ -96,15 +96,31 @@ class FlyNavigator(Env):
 		self.video = not (output_dict['RENDER_VIDEO'] is None) ## Whether or not to render a video of the fly's trajectory
 		self.writer = imageio.get_writer(output_dict['RENDER_VIDEO'], fps=30)
 
+		## Reward shaping parameters
+		reward_dict = config['reward']
+		self.source_reward = reward_dict['SOURCE_REWARD']
+		self.per_step_reward = reward_dict['PER_STEP_REWARD']
+		self.impose_walls = reward_dict['IMPOSE_WALLS']
+		if self.impose_walls:
+			self.wall_penalty = reward_dict['WALL_PENALTY']
+			self.wall_max_x = reward_dict['WALL_MAX_X_MM']
+			self.wall_min_x = reward_dict['WALL_MIN_X_MM']
+			self.wall_min_y = reward_dict['WALL_MIN_Y_MM']
+			self.wall_max_y = reward_dict['WALL_MAX_Y_MM']
+
+		self.use_radial_reward = reward_dict['USE_RADIAL_REWARD']
+		if self.use_radial_reward:
+			self.radial_reward_scale = reward_dict['RADIAL_REWARD_SCALE']
+
 		## Misc
 		self.rng = rng
-		if output_dict['RECORD_SUCCESS']:
+		self.record_success = output_dict['RECORD_SUCCESS']
+		if self.record_success:
 			self.all_episode_rewards = []
 			self.all_episode_success = []
 		self.episode_incrementer = 0
 		self.trajectory_number = 0
 		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
-		self.record_success = output_dict['RECORD_SUCCESS']
 
 
 	def _add_theta_observation(self):
@@ -122,6 +138,8 @@ class FlyNavigator(Env):
 	def reset(self):
 		## Reset method in gym returns the initial observation (state) of the environment
 		self.total_episode_reward = 0
+		self.reached_source = False
+		self.done = False
 		flip = self.rng.choice([True, False])
 		self.odor_plume.reset(flip = flip, rng = self.rng)
 		self.turn_durs = self.min_turn_dur + self.rng.exponential(scale = self.excess_turn_dur, size = self.max_frames)
@@ -149,15 +167,14 @@ class FlyNavigator(Env):
 	def step(self, action):
 		## Step method in gym takes an action and returns the next state, reward, done, and info
 		self.odor_plume.advance(rng=self.rng)
-		done = False
 		## Deal with actions that don't involve turning
 		if action == 0 or action == 3:
 			self.fly_spatial_parameters.update_params(action)
 			self._update_state()
 			reward = self.per_step_reward
 			if self.odor_plume.frame_number >= self.max_frames:		
-				done = True
-
+				self.done = True
+		
 		## Deal with actions that involve turning (1 is left, 2 is right)
 		elif action == 1 or action == 2:
 			## Turn duration is drawn from an exponential distribution with a minimum turn duration, with the samples drawn at reset
@@ -172,24 +189,24 @@ class FlyNavigator(Env):
 				reward += self.per_step_reward
 				self._update_state()
 				if self.odor_plume.frame_number >= self.max_frames:				
-					done = True
+					self.done = True
 					break
 			self.num_turns += 1
 		else:
 			raise ValueError('Action must be 0, 1, 2, or 3')
 
-		distance = np.linalg.norm(self.fly_spatial_parameters.position - self.source_location)
-		if distance < self.goal_radius:
-			done = True
-			reward = self.goal_reward
+		additional_rewards = self._get_additional_rewards()
+		reward += additional_rewards
 		self.total_episode_reward += reward
-		if done:
+
+		if self.done:
 			if self.record_success:
 				self.all_episode_rewards.append(self.total_episode_reward)
-				self.all_episode_success.append(1) if reward == 1 else self.all_episode_success.append(0)
+				self.all_episode_success.append(1) if self.reached_source else self.all_episode_success.append(0)
 			self.episode_incrementer += 1
+
 		info = {}
-		return self.all_obs, reward, done, info
+		return self.all_obs, reward, self.done, info
 
 	def draw_pointer(self, ax, position, angle, length=1.0, color='red'):
 		# Calculate the vertices of the triangle
@@ -258,3 +275,26 @@ class FlyNavigator(Env):
 		if self.video:
 			self.writer.close()
 		super(FlyNavigator, self).close()
+
+	def _get_additional_rewards(self):
+				
+		
+		current_distance = np.linalg.norm(self.fly_spatial_parameters.position - self.source_location)
+		if current_distance < self.goal_radius:
+			self.done = True
+			self.reached_source = True
+			reward = self.source_reward
+			return reward
+		if self.impose_walls: #for giving penalty for hitting walls
+			outside = (pos[0] > self.wall_max_x) + (pos[0] < self.wall_min_x) + (pos[1] > self.wall_max_y) + (pos[1] < self.wall_min_y) #checking if out of bounds
+			if outside:
+				reward = self.wall_penalty
+				self.done = True
+				return reward
+
+		if self.use_radial_reward: #for giving reward for decreasing distance from source
+			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
+			non_zero_check = np.sum(non_zero_check)>0
+			reward = self.radial_reward_scale*(self.previous_distance-current_distance)*non_zero_check
+			self.previous_distance = copy.deepcopy(current_distance)
+			return reward
