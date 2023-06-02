@@ -40,7 +40,7 @@ def test_model(model, config):
     lstm_states = None
     # Episode start signal
     episode_start = True
-    for _ in range(4000):
+    for st in range(4000):
         action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
         obs, _, done, _ = render_env.step(action)
         render_env.render()

@@ -36,7 +36,7 @@ class OdorFeatures():
 		self.tau = timescales['FILTER'] if "FILTER" in timescales else None
 		self.adaptation_tau = timescales['ADAPTATION'] if "ADAPTATION" in timescales else None
 		self.max_t_L = self.dt*plume_dict["STOP_FRAME"]
-
+		self.fix_antenna = state_dict['FIX_ANTENNA']
 		self.normalize = state_dict['NORMALIZE_ODOR_FEATURES']
 
 		feature_func_map = {'conc': self.get_conc, 'grad': self.get_grad, 'hrc': self.get_hrc, 'conc_left': self.get_conc_left, 'conc_right': self.get_conc_right, 'intermittency': self.get_intermittency, 't_L': self.get_t_L, 
@@ -63,8 +63,6 @@ class OdorFeatures():
 		"""
 		## Height is long axis of box, typically.
 		## If even then split left and right evenly. If odd then share middle. 
-
-		## TODO: check that orientation is correct here (assumption is 0 degrees)
 
 		px_height = round(antenna_height_mm/mm_per_px)
 		px_width = round(antenna_width_mm/mm_per_px)
@@ -123,6 +121,8 @@ class OdorFeatures():
 		return feats
 	
 	def update(self, theta, pos, odor_frame):
+		if self.fix_antenna:
+			theta = np.pi ## Rotate the antenna from downwind to upwind.
 		## Returns the odor features requested in the order of state_dict['features']
 		self._rotate_and_translate_sensors(theta = theta, pos = pos)
 		self._get_left_right_odors(odor_frame=odor_frame)
@@ -141,7 +141,7 @@ class OdorFeatures():
 		return (self.mean_left_odor - self.mean_right_odor) / self.max_conc if normalize else self.mean_left_odor - self.mean_right_odor
 
 	def get_hrc(self, normalize=False):
-		return self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor if normalize else (self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor)/(self.max_conc**2)
+		return (self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor)/(self.max_conc**2) if normalize else self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor
 	
 	def get_intermittency(self, normalize=False):
 		self.intermittency += 1/self.tau*(self.odor_bin-self.intermittency)*self.dt
@@ -154,21 +154,17 @@ class OdorFeatures():
 		return int(self.concentration > self.base_threshold)
 	
 	def get_grad_disc(self, normalize=False):
-		if self.mean_left_odor > self.mean_right_odor:
-			return 0
-		elif self.mean_left_odor < self.mean_right_odor:
-			return 1
-		else:
-			return 2
-	
-	def get_hrc_disc(self, normalize=False):
-		if self.left_odor_prev*self.mean_right_odor > self.right_odor_prev*self.mean_left_odor:
-			return 0
-		elif self.left_odor_prev*self.mean_right_odor < self.right_odor_prev*self.mean_left_odor:
-			return 1
-		else:
-			return 2
+		left_disc = int(self.mean_left_odor > self.base_threshold)
+		right_disc = int(self.mean_right_odor > self.base_threshold)
+		return left_disc - right_disc + 1
 
+	def get_hrc_disc(self, normalize=False):
+		left_disc = int(self.mean_left_odor > self.base_threshold)
+		right_disc = int(self.mean_right_odor > self.base_threshold)
+		left_disc_prev = int(self.left_odor_prev > self.base_threshold)
+		right_disc_prev = int(self.right_odor_prev > self.base_threshold)
+		return (left_disc_prev*right_disc - right_disc_prev*left_disc) + 1
+		
 	def update_bins(self):
 		if self.threshold_style == 'fixed':
 			self.odor_bin = self.concentration > self.base_threshold

@@ -29,6 +29,7 @@ state_dict = {
     "NORMALIZE_ODOR_FEATURES": True,
     "TIMESCALES_S": {"FILTER": 0.2, "THRESHOLD": 0.2}, ## timescales for temporal filtering and thresholding of concentration (in adaptive case)
     "DISCRETE_OBSERVABLES": False, ## whether to use discrete or continuous state space
+    "FIX_ANTENNA": False, ## whether to fix the antenna to pointing upwind
 }
 
 output_dict = {

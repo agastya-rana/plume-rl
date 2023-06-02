@@ -86,5 +86,5 @@ if __name__ == "__main__":
     ## Train the model
     #model = train_model(config_dict)
     ## Test the model
-    model = RecurrentPPO.load(os.path.join('.', 'src', 'models', 'trained_models', 'ppo_recurrent_cont'))
+    model = RecurrentPPO.load("src/trained_models/ppo_recurrent_cont")
     test_model(model, config_dict)
