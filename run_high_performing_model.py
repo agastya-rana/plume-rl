@@ -99,7 +99,7 @@ for episode in range(0, config_dict['N_EPISODES']):
 
 	while not done:
 
-		action = model.predict(obs)
+		action = model.predict(obs)[0]
 
 		new_row = np.zeros(num_cols)
 		new_row[0:3] = obs[0:3]
