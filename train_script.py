@@ -104,7 +104,10 @@ for i in range(0, config_dict['N_EPISODES']):
 	model.learn(total_timesteps=save_steps, reset_num_timesteps=False, tb_log_name = str(seed)+"_DQN_model")
 	np.save('models/'+str(seed)+"_reward_history.npy", np.array(environment.all_episode_rewards))
 	np.save('models/'+str(seed)+"_success_history.npy", np.array(environment.all_episode_success))
-	model.save('models/'+str(seed)+'after_'+str(config_dict['N_EPISODES']*i))
+
+	if (i+1) % 100 == 0:
+
+		model.save(models_dir+str(seed)+'after_'+str(i))
 
 
 
