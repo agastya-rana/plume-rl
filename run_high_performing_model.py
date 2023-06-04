@@ -10,9 +10,56 @@ import time
 import sys 
 import os
 
+plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
+
+plume_dict = {
+    "MM_PER_PX": 0.2,
+    "MAX_CONCENTRATION": 255,
+    "MOVIE_PATH": plume_movie_path,
+	"MIN_FRAME": 500,
+	"STOP_FRAME": 5000,
+	"RESET_FRAME_RANGE": np.array([501, 800]),
+	"SOURCE_LOCATION_MM": np.array([30,90]),
+    "MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
+	"INITIAL_MAX_RESET_X_MM": 300,
+	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
+	"MIN_RESET_Y_MM": 0,
+	"MAX_RESET_Y_MM": 180,
+    "SHIFT_EPISODES": 100,
+	"RESET_X_SHIFT_MM": 5,
+    "INIT_THETA_MIN": 0,
+	"INIT_THETA_MAX": 2*np.pi,
+}
+
+state_dict = {
+    "USE_COSINE_AND_SIN_THETA": True,
+    "DISCRETE_OBSERVABLES": False,
+    "FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
+    "NORMALIZE_ODOR_FEATURES": True,
+	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
+	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
+	"THETA_DISCRETIZATION": 8, ## number of bins of discretizing theta
+    "TIMESCALES_S": {"FILTER": 0.2, "THRESHOLD": 0.2}, ## timescales for temporal filtering and thresholding of concentration (in adaptive case)
+    "FIX_ANTENNA": False, ## whether to fix the antenna to pointing upwind
+}
+
+output_dict = {
+    "RENDER_VIDEO": 'dqn_agent_run.mp4', ## name of video file to render to
+    'RECORD_SUCCESS': True ## whether to record rewards and number of successful episodes
+}
+
+agent_dict = {
+    "ANTENNA_LENGTH_MM": 0.41,
+	"ANTENNA_WIDTH_MM": 0.21,
+    "WALK_SPEED_MM_PER_S": 10,
+	"DELTA_T_S": 1/60,
+    "TURN_ANG_SPEED_RAD_PER_S": 100*np.pi/180,
+	"MIN_TURN_DUR_S": 0.18,
+	"EXCESS_TURN_DUR_S": 0.18,
+    "GOAL_RADIUS_MM": 10, #success radius in mm
+}
 
 reward_dict = {
-	
 	"SOURCE_REWARD": 500,
 	"PER_STEP_REWARD": -1/60,
 	"IMPOSE_WALLS": True,
@@ -23,58 +70,8 @@ reward_dict = {
 	"WALL_MAX_Y_MM": 180,
 	"USE_RADIAL_REWARD": True,
 	"RADIAL_REWARD_SCALE": 5,
-
 }
 
-config_dict = {
-	
-	"NUM_ACTIONS": 4,
-	"USE_COSINE_AND_SIN_THETA": True,
-	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
-	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
-	"ODOR_FEATURES_CLASS": OdorFeatures_no_temporal,
-	"DISCRETIZE_OBSERVABLES": False,
-	"THETA_DISCRETIZATION": 6,
-	"TEMPORAL_FILTER_TIMESCALE_S": 1,
-	"TEMPORAL_THRESHOLD_ADAPTIVE_TIMESCALE_S":5,
-	"TEMPORAL_FILTER_ALL":False,
-	"MM_PER_PX": 0.2,
-	"ANTENNA_LENGTH_MM": 0.41,
-	"ANTENNA_WIDTH_MM": 0.21,
-	"MAX_CONCENTRATION": 255,
-	"NORMALIZE_ODOR_FEATURES": True,
-	"WALK_SPEED_MM_PER_S": 10,
-	"DELTA_T_S": 1/60,
-	"USE_MOVIE": True,
-	"MOVIE_PATH": None,
-	"MIN_FRAME": 500,
-	"STOP_FRAME": 5000,
-	"RESET_FRAME_RANGE": np.array([501,800]),
-	"SOURCE_LOCATION_MM": np.array([30,90]),
-	"GOAL_RADIUS_MM": 10, #success radius in mm
-	"N_EPISODES" : 100, # How many independently initialized runs to train on
-	"MAX_ALPHA": 0.1, # Learning rate
-	"MIN_ALPHA": 0.001,
-	"GAMMA":0.99, # Reward temporal discount factor
-	"MIN_EPSILON":0.01, # Asymptote of decaying exploration rate
-	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
-	"INITIAL_MAX_RESET_X_MM": 300,
-	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
-	"MIN_RESET_Y_MM": 0,
-	"MAX_RESET_Y_MM": 180,
-	"SOURCE_LOC_MM": np.array([30,90]), #Source location in mm
-	"INIT_THETA_MIN": 0,
-	"INIT_THETA_MAX": 2*np.pi,
-	"TURN_ANG_SPEED_RAD_PER_S": 100*np.pi/180,
-	"MIN_TURN_DUR_S": 0.18,
-	"EXCESS_TURN_DUR_S": 0.18,
-	"SHIFT_EPISODES": 100,
-	"RESET_X_SHIFT_MM": 0,
-	"RENDER_VIDEO": True,
-	"reward_dict": reward_dict
-
-
-}
 
 seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
