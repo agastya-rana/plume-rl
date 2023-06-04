@@ -76,21 +76,21 @@ reward_dict = {
 }
 
 
+N_EPISODES = 100
+
 seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
-plume_movie_path = os.path.join('..','src', 'data', 'plume_movies', 'intermittent_smoke.avi')
-config_dict['MOVIE_PATH'] = plume_movie_path
 env = FlyNavigator(rng = rng, config = config_dict)
 model_path = os.path.join('..','trained_models', 'dqn_no_temp_first_round_redo_060223', '7after_8000000.zip')
 
 model = DQN.load(model_path, env = env)
-success_arr = np.zeros(config_dict['N_EPISODES'])
+success_arr = np.zeros(N_EPISODES)
 
 num_cols = 7
 
-data_arr = np.zeros((4500,num_cols,config_dict['N_EPISODES']))
+data_arr = np.zeros((4500,num_cols,N_EPISODES))
 
-for episode in range(0, config_dict['N_EPISODES']):
+for episode in range(0, N_EPISODES):
 
 	obs = env.reset()
 	done = False
