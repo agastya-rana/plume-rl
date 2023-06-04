@@ -3,7 +3,7 @@ import sys
 print(sys.path)
 
 ## Trains the baseline RNN on the odor plume using PPO on actor-critic MLP heads stemming from the RNN feature extractor
-from src.models.rnn_baseline import *
+#from src.models.rnn_baseline import *
 from src.environment.gym_environment_class import *
 import os
 import numpy as np
@@ -11,6 +11,8 @@ import gym
 #from sb3_contrib import RecurrentPPO
 from stable_baselines3 import DQN
 from stable_baselines3.common.vec_env import VecEnv
+import stable_baselines3.common.utils
+
 plume_movie_path = os.path.join('.', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 
 plume_dict = {
@@ -45,7 +47,7 @@ state_dict = {
 }
 
 output_dict = {
-    "RENDER_VIDEO": None, ## name of video file to render to
+    "RENDER_VIDEO": 'dqn_agent_run.mp4', ## name of video file to render to
     'RECORD_SUCCESS': True ## whether to record rewards and number of successful episodes
 }
 
