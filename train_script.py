@@ -13,7 +13,7 @@ from stable_baselines3 import DQN
 from stable_baselines3.common.vec_env import VecEnv
 import stable_baselines3.common.utils
 
-plume_movie_path = os.path.join('.', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
+plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 
 plume_dict = {
     "MM_PER_PX": 0.2,
