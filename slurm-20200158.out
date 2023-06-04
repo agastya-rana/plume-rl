@@ -1,0 +1,35 @@
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+['/vast/palmer/home.grace/asr93/Navigation/plume_rl/src/training_scripts', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python310.zip', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/lib-dynload', '/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages', '/vast/palmer/home.grace/asr93/Navigation/plume_rl']
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/gym/spaces/box.py:127: UserWarning: [33mWARN: Box bound precision lowered by casting to float32[0m
+  logger.warn(f"Box bound precision lowered by casting to {self.dtype}")
+Using cpu device
+Logging to ./logs/ppo_recurrent_cont/ppo_recurrent_cont_1
+Traceback (most recent call last):
+  File "/vast/palmer/home.grace/asr93/Navigation/plume_rl/src/training_scripts/train_rnn_baseline.py", line 87, in <module>
+    model = train_model(config_dict)
+  File "/vast/palmer/home.grace/asr93/Navigation/plume_rl/src/models/rnn_baseline.py", line 30, in train_model
+    model.learn(total_timesteps=training_dict['n_episodes']*training_dict['max_episode_length'], tb_log_name=training_dict['model_name'])
+  File "/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/sb3_contrib/ppo_recurrent/ppo_recurrent.py", line 469, in learn
+    continue_training = self.collect_rollouts(self.env, callback, self.rollout_buffer, n_rollout_steps=self.n_steps)
+  File "/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/sb3_contrib/ppo_recurrent/ppo_recurrent.py", line 254, in collect_rollouts
+    new_obs, rewards, dones, infos = env.step(clipped_actions)
+  File "/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/stable_baselines3/common/vec_env/base_vec_env.py", line 163, in step
+    return self.step_wait()
+  File "/gpfs/gibbs/project/emonet/asr93/conda_envs/EmonetLab/lib/python3.10/site-packages/stable_baselines3/common/vec_env/vec_monitor.py", line 87, in step_wait
+    episode_info[key] = info[key]
+KeyError: 'episode_reward'

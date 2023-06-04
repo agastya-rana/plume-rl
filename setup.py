@@ -1,10 +1,3 @@
-from setuptools import find_packages, setup
+from setuptools import setup, find_packages
 
-setup(
-    name='src',
-    packages=find_packages(),
-    version='0.1.0',
-    description='Solve odor plume navigation problems with RL',
-    author='Sam Brudner',
-    license='MIT',
-)
+setup(name='plume_rl', version='1.1', packages=find_packages())

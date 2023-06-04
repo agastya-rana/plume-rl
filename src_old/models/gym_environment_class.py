@@ -80,10 +80,6 @@ class FlyNavigator(Env):
 		all_obs = np.zeros(self.obs_dim)
 		all_obs[0:-1] = odor_obs
 		all_obs[-1] = self.fly_spatial_parameters.theta
-
-		#self.episode_incrementer += 1
-		
-
 		return all_obs
 
 

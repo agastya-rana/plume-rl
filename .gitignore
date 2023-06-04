@@ -90,3 +90,9 @@ target/
 
 #result images -- don't track this data
 result_images/
+
+## Training runs shouldn't get committed
+training_runs/
+
+## Logs shouldn't get committed
+logs/
