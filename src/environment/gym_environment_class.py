@@ -69,8 +69,6 @@ class FlyNavigator(Env):
 		self.min_turn_dur = agent_dict['MIN_TURN_DUR_S'] ## Minimum turn duration in seconds
 		self.excess_turn_dur = agent_dict['EXCESS_TURN_DUR_S'] ## Scale parameter for the exponential distribution of turn durations
 		self.dt = agent_dict['DELTA_T_S']
-		self.per_step_reward = agent_dict['PER_STEP_REWARD']
-		self.goal_reward = agent_dict['GOAL_REWARD']
 		
 		## Define odor plume parameters
 		self.odor_plume = OdorPlumeFromMovie(config) ## Defines the odor plume the fly is navigating in.
@@ -298,3 +296,5 @@ class FlyNavigator(Env):
 			reward = self.radial_reward_scale*(self.previous_distance-current_distance)*non_zero_check
 			self.previous_distance = copy.deepcopy(current_distance)
 			return reward
+
+		return 0
