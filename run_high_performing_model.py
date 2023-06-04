@@ -1,14 +1,17 @@
-from src.models.odor_senses import *
-from src.models.gym_environment_class import FlyNavigator
-#from stable_baselines3.deepq.policies import MlpPolicy
-from stable_baselines3 import DQN
-import stable_baselines3.common.utils
+import sys
+#sys.path.append('../../')
+print(sys.path)
 
-import numpy as np 
-#from stable_baselines3 import DQN
-import time
-import sys 
+## Trains the baseline RNN on the odor plume using PPO on actor-critic MLP heads stemming from the RNN feature extractor
+#from src.models.rnn_baseline import *
+from src.environment.gym_environment_class import *
 import os
+import numpy as np
+import gym
+#from sb3_contrib import RecurrentPPO
+from stable_baselines3 import DQN
+from stable_baselines3.common.vec_env import VecEnv
+import stable_baselines3.common.utils
 
 plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 
