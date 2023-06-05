@@ -159,6 +159,7 @@ class FlyNavigator(Env):
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, 
 			pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame) ## Update the odor features at initalized fly location
+		self.odor_features.update_hist()
 		self.all_obs[:self.num_odor_obs] = odor_obs
 		self._add_theta_observation()
 
