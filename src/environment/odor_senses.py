@@ -38,6 +38,7 @@ class OdorFeatures():
 		self.max_t_L = self.dt*plume_dict["STOP_FRAME"]
 		self.fix_antenna = state_dict['FIX_ANTENNA']
 		self.normalize = state_dict['NORMALIZE_ODOR_FEATURES']
+		self.static_sensor = None
 
 		feature_func_map = {'conc': self.get_conc, 'grad': self.get_grad, 'hrc': self.get_hrc, 'conc_left': self.get_conc_left, 'conc_right': self.get_conc_right, 'intermittency': self.get_intermittency, 't_L': self.get_t_L, 
 		'conc_disc': self.get_conc_disc, 'grad_disc': self.get_grad_disc, 'hrc_disc': self.get_hrc_disc}
@@ -51,15 +52,16 @@ class OdorFeatures():
 		self.num_pts = np.shape(self.std_left_box)[0]
 
 		self.func_evals = [feature_func_map[feat] for feat in self.features]
-		self.feat_bounds = np.array([bounds_func_map[feat] if self.normalize else normalize_bounds_func_map[feat] for feat in [f for f in self.features if f not in ['conc_disc', 'grad_disc', 'hrc_disc']]])
+		self.feat_bounds = np.array([normalize_bounds_func_map[feat] if self.normalize else bounds_func_map[feat] for feat in [f for f in self.features if f not in ['conc_disc', 'grad_disc', 'hrc_disc']]])
 		num_discrete = lambda x : 3 if x in ['grad_disc', 'hrc_disc'] else 2
 		self.discretization_index = [num_discrete(f) for f in self.features if f in ['conc_disc', 'grad_disc', 'hrc_disc']]
 
 	@staticmethod
 	def _make_L_R_std_box(mm_per_px, antenna_height_mm, antenna_width_mm):
-
 		"""
 		Make a standard left and right box for the antenna that can be rotated and translated to match the orientation and position of the antenna.
+		The boxes have dimension (px_height*px_width, 2) where px_height and px_width are the height and width of the antenna in pixels.
+		x,y coordinates are in units of mm.
 		"""
 		## Height is long axis of box, typically.
 		## If even then split left and right evenly. If odd then share middle. 
@@ -78,9 +80,7 @@ class OdorFeatures():
 		# Separate the box into left and right halves
 		left_box = big_box[big_box[:, 1] >= 0]
 		right_box = big_box[big_box[:, 1] <= 0]
-
 		return left_box, right_box
-		
 	
 	@staticmethod
 	def _rotate_points(points, theta):
@@ -118,6 +118,7 @@ class OdorFeatures():
 		self.update_bins()
 		self.update_whiff()
 		feats = np.array([self.func_evals[i](normalize=self.normalize) for i in range(len(self.func_evals))])
+		self.update_hist()
 		return feats
 	
 	def update(self, theta, pos, odor_frame):
@@ -210,3 +211,14 @@ class OdorFeatures():
 		self.t_whiff = -100.
 		self.t_L = 1000.
 		self.odor_bin = False
+	
+	def static_sensor(self, theta_set, pos_set, duration):
+		pass
+		if self.static_sensor is None:
+			pos_arr = np.tile(pos, (self.num_pts,1))
+			self.left_pts = self._rotate_points(self.std_left_box, theta) + pos_arr
+			self.right_pts = self._rotate_points(self.std_right_box, theta) + pos_arr
+		## Returns the odor features requested in the order of state_dict['features']
+		self._rotate_and_translate_sensors(theta = theta, pos = pos)
+		self._get_left_right_odors(odor_frame=odor_frame)
+		return self.get_features()

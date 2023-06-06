@@ -29,10 +29,12 @@ def train_model(config):
 
     model.learn(total_timesteps=training_dict['n_episodes']*training_dict['max_episode_length'], tb_log_name=training_dict['model_name'])
     # Save the model
-    model.save(os.path.join('.', 'src', 'trained_models', training_dict['model_name']))
+    model.save(os.path.join(config["output"]["SAVE_DIRECTORY"], training_dict['model_name']))
     return model
 
-def test_model(model, config):
+def test_model(config):
+    config["output"]["RECORD_SUCCESS"] = True
+    model = RecurrentPPO.load(os.path.join(config["output"]["SAVE_DIRECTORY"], config["training"]['model_name']))
     rng = np.random.default_rng(seed=1)
     render_env = FlyNavigator(rng, config)
     obs = render_env.reset()
@@ -40,7 +42,8 @@ def test_model(model, config):
     lstm_states = None
     # Episode start signal
     episode_start = True
-    for st in range(4000):
+    episode_no = 0
+    while episode_no < config["training"]['test_episodes']:
         action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
         obs, _, done, _ = render_env.step(action)
         render_env.render()
@@ -48,6 +51,11 @@ def test_model(model, config):
         if done:
             obs = render_env.reset()
             episode_start = True
+            episode_no += 1
         else:
             episode_start = False
+    np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["model_name"]+"_reward_history.npy"), np.array(render_env.all_episode_rewards))
+    np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["model_name"]+"_success_history.npy"), np.array(render_env.all_episode_success))
+    print("Average reward: ", np.mean(render_env.all_episode_rewards))
+    print("Average success: ", np.mean(render_env.all_episode_success))
     render_env.close()
