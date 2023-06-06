@@ -27,6 +27,10 @@ class OdorPlumeFromMovie:
         self.frame_number = rng.integers(low=self.reset_frame_range[0], high=self.reset_frame_range[1],size=1).item()
         self.flip = flip
         self.frame = self.loaded_movie[:,:,self.frame_number-self.start_frame]
+        
+        if self.flip:
+
+            self.frame = np.flip(self.frame, axis = 1)
 
     def advance(self, rng):
 
