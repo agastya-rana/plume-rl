@@ -1,14 +1,6 @@
-import sys
-print(sys.path)
-
-## Trains the baseline RNN on the odor plume using PPO on actor-critic MLP heads stemming from the RNN feature extractor
-from src.models.rnn_baseline import *
-from src.environment.gym_environment_class import *
+from src.models.plume_summary import PlumeSummary
 import os
 import numpy as np
-import gym
-from sb3_contrib import RecurrentPPO
-from stable_baselines3.common.vec_env import VecEnv
 plume_movie_path = os.path.join('.', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 
 plume_dict = {
@@ -33,7 +25,7 @@ plume_dict = {
 state_dict = {
     "USE_COSINE_AND_SIN_THETA": True,
     "DISCRETE_OBSERVABLES": False,
-    "FEATURES": ['conc', 'grad', 'hrc', 'intermittency', 't_L'], ## see OdorFeatures class for options,
+    "FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
     "NORMALIZE_ODOR_FEATURES": True,
 	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
@@ -43,7 +35,7 @@ state_dict = {
 }
 
 output_dict = {
-    "RENDER_VIDEO": 'rnn.mp4', ## name of video file to render to
+    "RENDER_VIDEO": 'rnn_cont.mp4', ## name of video file to render to
     'RECORD_SUCCESS': False, ## whether to record rewards and number of successful episodes
     'SAVE_DIRECTORY': os.path.join('.', 'src', 'trained_models') ## directory to save model
 }
@@ -56,6 +48,8 @@ agent_dict = {
     "TURN_ANG_SPEED_RAD_PER_S": 100*np.pi/180,
 	"MIN_TURN_DUR_S": 0.18,
 	"EXCESS_TURN_DUR_S": 0.18,
+    "PER_STEP_REWARD": -1,
+    "GOAL_REWARD": 1000,
     "GOAL_RADIUS_MM": 10, #success radius in mm
 }
 
@@ -63,48 +57,20 @@ reward_dict = {
 	"SOURCE_REWARD": 500,
 	"PER_STEP_REWARD": -1/60,
 	"IMPOSE_WALLS": True,
-	"WALL_PENALTY": -500,
+	"WALL_PENALTY": -50,
 	"WALL_MAX_X_MM": 330,
 	"WALL_MIN_X_MM": -10,
 	"WALL_MIN_Y_MM": 0,
 	"WALL_MAX_Y_MM": 180,
-	"USE_RADIAL_REWARD": False,
-	"RADIAL_REWARD_SCALE": 0.5,
-    "POTENTIAL_SHAPING": True,
-    "CONC_UPWIND_REWARD": 1/60,
-    'CONC_REWARD': 0,
-    "MOTION_REWARD": 0,
+	"USE_RADIAL_REWARD": True,
+	"RADIAL_REWARD_SCALE": 5,
 }
 
-training_dict = {
-    "model_class": RecurrentPPO,
-    "policy": "MlpLstmPolicy",
-    "n_episodes": 2000,
-    "max_episode_length": 5000,
-    # "lr_schedule": "constant",
-    # "learning_rate": 0.0001,
-    "gamma": 0.995, ## discount factor.
-    "GAMMA": 0.995, ## change this later to match all upper case
-    "gae_lambda": 0.95, ## GAE parameter
-    "clip_range": 0.2, ## clip range for PPO
-    "vf_coef": 0.5, ## value function coefficient in loss factor
-    "ent_coef": 0.01, ## entropy coefficient in loss factor
-    "lstm_hidden_size": 32, ## size of LSTM hidden state
-    "actor_critic_layers": [32, 64], ## MLP layers for actor-critic heads; first dimension should be lstm_hidden_size
-    "n_envs": 8, ## number of parallel environments/CPU cores
-    "n_steps": 512, ## number of steps per environment per update
-    "model_name": "rnn_shaping_upwind", ## name of model to save
-    "tensorboard_log": "./logs/rnn_shaping/", ## directory to save tensorboard logs
-    "test_episodes": 2, ## number of episodes to test the model
-}
+training_dict = {}
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}
 
-if __name__ == "__main__":
-    ## Train the model
-    if len(sys.argv) > 1:
-        config_dict["training"]["model_name"] += '_' + sys.argv[1]
-        config_dict["output"]["RENDER_VIDEO"] = config_dict["output"]["RENDER_VIDEO"].split('.')[0] + '_' + sys.argv[1] + '.mp4'
-    model = train_model(config_dict)
-    ## Test the model
-    test_model(config_dict)
+rbins = [0, 10, 20]
+thetabins = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
+summary = PlumeSummary(config_dict, rbins, thetabins, n_points=100)
+summary.plot()

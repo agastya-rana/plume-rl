@@ -214,3 +214,11 @@ class OdorFeatures():
 	
 	def static_sensor(self, theta_set, pos_set, duration):
 		pass
+		if self.static_sensor is None:
+			pos_arr = np.tile(pos, (self.num_pts,1))
+			self.left_pts = self._rotate_points(self.std_left_box, theta) + pos_arr
+			self.right_pts = self._rotate_points(self.std_right_box, theta) + pos_arr
+		## Returns the odor features requested in the order of state_dict['features']
+		self._rotate_and_translate_sensors(theta = theta, pos = pos)
+		self._get_left_right_odors(odor_frame=odor_frame)
+		return self.get_features()
