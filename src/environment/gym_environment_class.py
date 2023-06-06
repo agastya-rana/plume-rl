@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use('Agg')  # Use the 'Agg' backend
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import time
+import os
 
 from src.environment.fly_spatial_parameters import FlySpatialParameters
 from src.environment.odor_plumes import *
@@ -30,6 +30,8 @@ class FlyNavigator(Env):
 		agent_dict = config["agent"]
 		plume_dict = config["plume"]
 		output_dict = config["output"]
+		training_dict = config["training"]
+		self.gamma = training_dict["GAMMA"]
 
 		## Initialize state parameters
 		self.fly_spatial_parameters = FlySpatialParameters(config) ## True (x,y,theta); note fly may not have direct access to theta.
@@ -69,8 +71,6 @@ class FlyNavigator(Env):
 		self.min_turn_dur = agent_dict['MIN_TURN_DUR_S'] ## Minimum turn duration in seconds
 		self.excess_turn_dur = agent_dict['EXCESS_TURN_DUR_S'] ## Scale parameter for the exponential distribution of turn durations
 		self.dt = agent_dict['DELTA_T_S']
-		self.per_step_reward = agent_dict['PER_STEP_REWARD']
-		self.goal_reward = agent_dict['GOAL_REWARD']
 		
 		## Define odor plume parameters
 		self.odor_plume = OdorPlumeFromMovie(config) ## Defines the odor plume the fly is navigating in.
@@ -94,13 +94,20 @@ class FlyNavigator(Env):
 		## Render parameters
 		self.fig, self.ax = plt.subplots()
 		self.video = not (output_dict['RENDER_VIDEO'] is None) ## Whether or not to render a video of the fly's trajectory
-		self.writer = imageio.get_writer(output_dict['RENDER_VIDEO'], fps=30)
+		self.writer = imageio.get_writer(os.path.join(output_dict['SAVE_DIRECTORY'], training_dict['model_name']+".mp4"), fps=60) if self.video else None
 
 		## Reward shaping parameters
 		reward_dict = config['reward']
 		self.source_reward = reward_dict['SOURCE_REWARD']
 		self.per_step_reward = reward_dict['PER_STEP_REWARD']
 		self.impose_walls = reward_dict['IMPOSE_WALLS']
+		self.potential_shaping = reward_dict['POTENTIAL_SHAPING']
+		 ## dict of potential shaping parameters; keys in [conc_penalty, conc_upwind, downwind, motion]
+		self.conc_upwind_reward = reward_dict['CONC_UPWIND_REWARD'] if self.potential_shaping else 0
+		self.conc_reward = reward_dict['CONC_REWARD'] if self.potential_shaping else 0
+		self.motion_reward = reward_dict['MOTION_REWARD'] if self.potential_shaping else 0
+	
+		
 		if self.impose_walls:
 			self.wall_penalty = reward_dict['WALL_PENALTY']
 			self.wall_max_x = reward_dict['WALL_MAX_X_MM']
@@ -140,6 +147,8 @@ class FlyNavigator(Env):
 		self.total_episode_reward = 0
 		self.reached_source = False
 		self.done = False
+		self.trajectory_number = 0
+		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
 		flip = self.rng.choice([True, False])
 		self.odor_plume.reset(flip = flip, rng = self.rng)
 		self.turn_durs = self.min_turn_dur + self.rng.exponential(scale = self.excess_turn_dur, size = self.max_frames)
@@ -167,6 +176,9 @@ class FlyNavigator(Env):
 	def step(self, action):
 		## Step method in gym takes an action and returns the next state, reward, done, and info
 		self.odor_plume.advance(rng=self.rng)
+		## Store the following for shaping:
+		self.prev_theta = self.fly_spatial_parameters.theta
+		self.prev_conc = self.all_obs[0] ## assumes that the first observation is the concentration
 		## Deal with actions that don't involve turning
 		if action == 0 or action == 3:
 			self.fly_spatial_parameters.update_params(action)
@@ -207,6 +219,50 @@ class FlyNavigator(Env):
 
 		info = {}
 		return self.all_obs, reward, self.done, info
+	
+	def _get_additional_rewards(self):
+		# Get the current distance from the source
+		reward = 0
+		pos = self.fly_spatial_parameters.position
+		current_distance = np.linalg.norm(pos - self.source_location)
+		if current_distance < self.goal_radius:
+			self.done = True
+			self.reached_source = True
+			reward = self.source_reward
+			return reward
+		if self.impose_walls: #for giving penalty for hitting walls
+			outside = (pos[0] > self.wall_max_x) + (pos[0] < self.wall_min_x) + (pos[1] > self.wall_max_y) + (pos[1] < self.wall_min_y) #checking if out of bounds
+			if outside:
+				reward = self.wall_penalty
+				self.done = True
+				return reward
+
+		if self.use_radial_reward: #for giving reward for decreasing distance from source
+			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
+			non_zero_check = np.sum(non_zero_check)>0
+			reward = self.radial_reward_scale*(self.previous_distance-current_distance)*non_zero_check
+			self.previous_distance = copy.deepcopy(current_distance)
+
+		## Potential shaping rewards
+		if self.conc_upwind_reward:
+			new_potential = -self.conc_upwind_reward*self.all_obs[0]*np.cos(self.fly_spatial_parameters.theta)
+			old_potential = -self.conc_upwind_reward*self.prev_conc*self.prev_theta
+			reward += self.gamma*new_potential - old_potential
+			
+		if self.conc_reward:
+			new_potential = self.conc_reward*self.all_obs[0]
+			old_potential = self.conc_reward*self.prev_conc
+			reward += self.gamma*new_potential - old_potential
+	
+		return reward
+
+		#if self.motion_reward:
+		#	reward += self.motion_reward*self.all_obs[2]*np.sin(self.fly_spatial_parameters.theta) ## note: this requires 'motion' to be the third odor feature
+
+		# 5. do pdf of state space vectors for trial to ensure there is a signal on which to navigate
+		# 6. amplify the odor concentration gating reward signal
+		## think about removing the penalty for turning
+		## try a larger antenna size
 
 	def draw_pointer(self, ax, position, angle, length=1.0, color='red'):
 		# Calculate the vertices of the triangle
@@ -236,6 +292,8 @@ class FlyNavigator(Env):
 		#self.ax.scatter(*self.fly_spatial_parameters.position, color='red')
 		#self.ax.add_patch(patches.Arrow(*self.fly_spatial_parameters.position, np.cos(self.fly_spatial_parameters.theta), np.sin(self.fly_spatial_parameters.theta), width=0.5, head_width=4, color='red'))
 		# Plot the trajectory of the fly
+
+		## TODO: change these lines to reset trajectories at the end of an episode
 		self.fly_trajectory[self.trajectory_number] = self.fly_spatial_parameters.position
 		self.trajectory_number += 1
 		self.ax.plot(*zip(*self.fly_trajectory), color='cyan')
@@ -275,26 +333,3 @@ class FlyNavigator(Env):
 		if self.video:
 			self.writer.close()
 		super(FlyNavigator, self).close()
-
-	def _get_additional_rewards(self):
-		# Get the current distance from the source
-		pos = self.fly_spatial_parameters.position
-		current_distance = np.linalg.norm(pos - self.source_location)
-		if current_distance < self.goal_radius:
-			self.done = True
-			self.reached_source = True
-			reward = self.source_reward
-			return reward
-		if self.impose_walls: #for giving penalty for hitting walls
-			outside = (pos[0] > self.wall_max_x) + (pos[0] < self.wall_min_x) + (pos[1] > self.wall_max_y) + (pos[1] < self.wall_min_y) #checking if out of bounds
-			if outside:
-				reward = self.wall_penalty
-				self.done = True
-				return reward
-
-		if self.use_radial_reward: #for giving reward for decreasing distance from source
-			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
-			non_zero_check = np.sum(non_zero_check)>0
-			reward = self.radial_reward_scale*(self.previous_distance-current_distance)*non_zero_check
-			self.previous_distance = copy.deepcopy(current_distance)
-			return reward

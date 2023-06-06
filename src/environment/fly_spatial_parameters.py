@@ -23,7 +23,7 @@ class FlySpatialParameters():
 		elif action == 1:
 			self.theta += self.ang_step_size
 			if self.theta > 2*np.pi:
-				self.theta = self.theta % 2*np.pi
+				self.theta = self.theta - 2*np.pi
 
 		## Action 2: turn right; enforced for several timesteps in step method
 		elif action == 2:
