@@ -3,7 +3,7 @@ from gym import Env
 from gym.spaces import Box, Discrete, MultiDiscrete
 import imageio
 import matplotlib
-matplotlib.use('Agg')  # Use the 'Agg' backend
+#matplotlib.use('Agg')  # Use the 'Agg' backend
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import time
@@ -145,6 +145,8 @@ class FlyNavigator(Env):
 		odor_on = self.odor_plume.frame > self.conc_threshold
 		odor_on_indices = np.transpose(odor_on.nonzero())
 		valid_locations = odor_on_indices*self.mm_per_px
+		self.trajectory_number = 0
+		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
 
 		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
 			max_reset_x = np.min([self.max_reset_x, int(self.episode_incrementer/self.shift_episodes)*self.reset_x_shift+self.initial_max_reset_x])
