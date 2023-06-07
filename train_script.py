@@ -32,6 +32,7 @@ plume_dict = {
 	"RESET_X_SHIFT_MM": 5,
     "INIT_THETA_MIN": 0,
 	"INIT_THETA_MAX": 2*np.pi,
+	"PX_THRESHOLD": 100,
 }
 
 state_dict = {
