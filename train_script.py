@@ -40,7 +40,8 @@ state_dict = {
     "DISCRETE_OBSERVABLES": False,
     "FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
     "NORMALIZE_ODOR_FEATURES": True,
-	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
+	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.
+	"USE_BASE_THRESHOLD_FOR_MEAN": False,  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
 	"THETA_DISCRETIZATION": 8, ## number of bins of discretizing theta
     "TIMESCALES_S": {"FILTER": 0.2, "THRESHOLD": 0.2}, ## timescales for temporal filtering and thresholding of concentration (in adaptive case)
