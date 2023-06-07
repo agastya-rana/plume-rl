@@ -115,9 +115,11 @@ for i in range(0, training_dict['N_EPISODES']):
 	np.save('models/'+str(seed)+"_reward_history.npy", np.array(environment.all_episode_rewards))
 	np.save('models/'+str(seed)+"_success_history.npy", np.array(environment.all_episode_success))
 
-	if (i+1) % 100 == 0:
+	ep_num = len(environment.all_episode_rewards)
 
-		model.save(models_dir+str(seed)+'after_'+str(i))
+	if ep_num % 500 == 0 and ep_num != 0:
+
+		model.save(models_dir+str(seed)+'after_'+str(len(environment.all_episode_rewards)))
 
 
 
