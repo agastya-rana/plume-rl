@@ -96,13 +96,12 @@ rng = np.random.default_rng(seed)
 
 environment = FlyNavigator(rng = rng, config = config_dict)
 
-models_dir = 'models'
-logdir = 'logs'
+models_dir = 'models/'
 
 learning_rate = stable_baselines3.common.utils.get_linear_fn(start = training_dict['MAX_ALPHA'], 
  end = training_dict['MIN_ALPHA'], end_fraction = training_dict['LEARNING_END_FRACTION'])
 
-model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=training_dict['LOGDIR'], gamma = training_dict['GAMMA'], 
+model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=None, gamma = training_dict['GAMMA'], 
 	exploration_final_eps = training_dict['MIN_EPSILON'], seed = seed, learning_rate=learning_rate)
 
 #make these directories
