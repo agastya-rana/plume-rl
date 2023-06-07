@@ -104,5 +104,3 @@ for episode in range(0, N_EPISODES):
 		count+=1
 
 env.close()
-np.save(str(seed)+"_data_arr.npy", data_arr)
-np.save(str(seed)+"_success_arr.npy", success_arr)
