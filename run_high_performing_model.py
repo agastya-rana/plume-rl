@@ -50,7 +50,7 @@ state_dict = {
 
 output_dict = {
     "RENDER_VIDEO": 'dqn_agent_run.mp4', ## name of video file to render to
-    'RECORD_SUCCESS': True ## whether to record rewards and number of successful episodes
+    'RECORD_SUCCESS': True, ## whether to record rewards and number of successful episodes
     "SAVE_DIRECTORY": './'
 }
 
