@@ -76,7 +76,7 @@ reward_dict = {
 	"WALL_MIN_Y_MM": 0,
 	"WALL_MAX_Y_MM": 180,
 	"USE_RADIAL_REWARD": True,
-	"RADIAL_REWARD_SCALE": 5,
+	"RADIAL_REWARD": 5,
 	"POTENTIAL_SHAPING":False
 }
 
