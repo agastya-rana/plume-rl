@@ -10,6 +10,7 @@ class OdorPlumeFromMovie:
         self.frame_number = plume_dict['MIN_FRAME']
         self.start_frame = plume_dict['MIN_FRAME']
         self.stop_frame = plume_dict['STOP_FRAME']
+        self.px_threshold = plume_dict['PX_THRESHOLD']
         self.video_capture = cv2.VideoCapture(self.movie_path)
         self.fps = self.video_capture.get(cv2.CAP_PROP_FPS) ## Gets the FPS
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame) ## Sets the frame number to the frame number of the first frame
@@ -29,6 +30,10 @@ class OdorPlumeFromMovie:
         self.frame_number = rng.integers(low=self.reset_frame_range[0], high=self.reset_frame_range[1],size=1).item()
         self.flip = flip
         self.frame = self.loaded_movie[:,:,self.frame_number-self.start_frame]
+
+        if self.flip:
+
+            self.frame = np.flip(self.frame, axis = 1)
 
     def advance(self, rng):
         if self.load:
@@ -50,10 +55,11 @@ class OdorPlumeFromMovie:
         ## 2 is the red channel
         ## Transpose the frame so that the first axis is the longer axis, and the second axis is the y axis
         frame = frame[:, :, 2].T
-        frame[frame==1]=0 #because off plume seems to all be 1 and we want it to be 0
+        frame[frame<self.px_threshold]=0 #because off plume seems to all be 1 and we want it to be 0
         return frame
     
     def pick_random_frame(self, rng, delay=10):
         self.frame_number = np.random.randint(self.start_frame, self.stop_frame-delay-1)
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.frame_number)
         self.advance(rng)
+

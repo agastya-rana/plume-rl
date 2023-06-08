@@ -31,6 +31,7 @@ class OdorFeatures():
 
 		self.threshold_style = state_dict['CONCENTRATION_THRESHOLD_STYLE']
 		self.base_threshold = state_dict['CONCENTRATION_BASE_THRESHOLD']
+		self.use_base_threshold_for_mean = state_dict['USE_BASE_THRESHOLD_FOR_MEAN']
 		self.max_conc = plume_dict['MAX_CONCENTRATION']
 		timescales = state_dict['TIMESCALES_S']
 		self.tau = timescales['FILTER'] if "FILTER" in timescales else None
@@ -113,6 +114,11 @@ class OdorFeatures():
 
 		self.mean_left_odor = np.mean(self.left_odors)
 		self.mean_right_odor = np.mean(self.right_odors)
+
+		if self.use_base_threshold_for_mean:
+
+			self.mean_left_odor = self.mean_left_odor*(self.mean_left_odor>self.base_threshold)
+			self.mean_right_odor = self.mean_right_odor*(self.mean_right_odor>self.base_threshold)
 	
 	def get_features(self):
 		self.update_bins()

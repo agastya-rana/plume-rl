@@ -3,7 +3,7 @@ from gym import Env
 from gym.spaces import Box, Discrete, MultiDiscrete
 import imageio
 import matplotlib
-matplotlib.use('Agg')  # Use the 'Agg' backend
+#matplotlib.use('Agg')  # Use the 'Agg' backend
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
@@ -152,6 +152,8 @@ class FlyNavigator(Env):
 		odor_on = self.odor_plume.frame > self.conc_threshold
 		odor_on_indices = np.transpose(odor_on.nonzero())
 		valid_locations = odor_on_indices*self.mm_per_px
+		self.trajectory_number = 0
+		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
 
 		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
 			max_reset_x = np.min([self.max_reset_x, int(self.episode_incrementer/self.shift_episodes)*self.reset_x_shift+self.initial_max_reset_x])
@@ -166,6 +168,7 @@ class FlyNavigator(Env):
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, 
 			pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame) ## Update the odor features at initalized fly location
+		self.odor_features.update_hist()
 		self.all_obs[:self.num_odor_obs] = odor_obs
 		self._add_theta_observation()
 
@@ -326,4 +329,33 @@ class FlyNavigator(Env):
 	def close(self):
 		if self.video:
 			self.writer.close()
+<<<<<<< HEAD
 		super(FlyNavigator, self).close()
+=======
+		super(FlyNavigator, self).close()
+
+	def _get_additional_rewards(self):
+		# Get the current distance from the source
+		pos = self.fly_spatial_parameters.position
+		current_distance = np.linalg.norm(pos - self.source_location)
+		if current_distance < self.goal_radius:
+			self.done = True
+			self.reached_source = True
+			reward = self.source_reward
+			return reward
+		if self.impose_walls: #for giving penalty for hitting walls
+			outside = (pos[0] > self.wall_max_x) + (pos[0] < self.wall_min_x) + (pos[1] > self.wall_max_y) + (pos[1] < self.wall_min_y) #checking if out of bounds
+			if outside:
+				reward = self.wall_penalty
+				self.done = True
+				return reward
+
+		if self.use_radial_reward: #for giving reward for decreasing distance from source
+			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
+			non_zero_check = np.sum(non_zero_check)>0
+			reward = self.radial_reward_scale*(self.previous_distance-current_distance)*non_zero_check
+			self.previous_distance = copy.deepcopy(current_distance)
+			return reward
+
+		return 0
+>>>>>>> Viraaj
