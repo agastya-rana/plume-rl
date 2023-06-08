@@ -52,7 +52,6 @@ output_dict = {
     "RENDER_VIDEO": 'dqn_agent_run.mp4', ## name of video file to render to
     "RECORD_SUCCESS": True, ## whether to record rewards and number of successful episodes
     "SAVE_DIRECTORY": './',
-    "model_name":"DQN_no_temp"
 }
 
 agent_dict = {
@@ -88,7 +87,8 @@ training_dict = {
 "MIN_EPSILON":0.01,
 "LEARNING_END_FRACTION": 2/3,
 "LOGDIR": 'logs',
-"N_EPISODES": 10000
+"N_EPISODES": 10000,
+"model_name": 'DQN_no_temp'
 
 
 }
