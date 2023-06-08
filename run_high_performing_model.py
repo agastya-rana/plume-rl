@@ -52,7 +52,7 @@ output_dict = {
     "RENDER_VIDEO": 'dqn_agent_run.mp4', ## name of video file to render to
     'RECORD_SUCCESS': True, ## whether to record rewards and number of successful episodes
     "SAVE_DIRECTORY": './',
-    "model_name": 'DQN_big_antenna_no_temp'
+    
 }
 
 agent_dict = {
@@ -80,7 +80,8 @@ reward_dict = {
 	"POTENTIAL_SHAPING":False
 }
 
-training_dict = {"GAMMA":0.99}
+training_dict = {"GAMMA":0.99,
+"model_name": 'DQN_big_antenna_no_temp'}
 
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "reward": reward_dict, "training":training_dict}
