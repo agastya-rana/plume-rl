@@ -121,7 +121,7 @@ for i in range(0, training_dict['N_EPISODES']):
 
 	ep_num = len(environment.all_episode_rewards)
 
-	if ep_num % 500 == 0 and ep_num != 0:
+	if i % 500 == 0:
 
 		model.save(models_dir+str(seed)+'after_'+str(ep_num))
 
