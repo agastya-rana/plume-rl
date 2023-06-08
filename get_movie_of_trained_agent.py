@@ -32,6 +32,7 @@ plume_dict = {
 	"RESET_X_SHIFT_MM": 5,
     "INIT_THETA_MIN": 0,
 	"INIT_THETA_MAX": 2*np.pi,
+	"PX_THRESHOLD": 100,
 }
 
 state_dict = {
@@ -39,6 +40,7 @@ state_dict = {
     "DISCRETE_OBSERVABLES": False,
     "FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
     "NORMALIZE_ODOR_FEATURES": True,
+    "USE_BASE_THRESHOLD_FOR_MEAN": False,
 	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
 	"THETA_DISCRETIZATION": 8, ## number of bins of discretizing theta
@@ -47,8 +49,10 @@ state_dict = {
 }
 
 output_dict = {
-    "RENDER_VIDEO": './dqn_agent_run.mp4', ## name of video file to render to
-    'RECORD_SUCCESS': True ## whether to record rewards and number of successful episodes
+    "RENDER_VIDEO": 'dqn_agent_run.mp4', ## name of video file to render to
+    'RECORD_SUCCESS': True, ## whether to record rewards and number of successful episodes
+    "SAVE_DIRECTORY": './',
+    
 }
 
 agent_dict = {
@@ -72,17 +76,23 @@ reward_dict = {
 	"WALL_MIN_Y_MM": 0,
 	"WALL_MAX_Y_MM": 180,
 	"USE_RADIAL_REWARD": True,
-	"RADIAL_REWARD_SCALE": 5,
+	"RADIAL_REWARD": 5,
+	"POTENTIAL_SHAPING":False
 }
 
+training_dict = {"GAMMA":0.99,
+"model_name": 'DQN_big_antenna_no_temp'}
 
-config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "reward": reward_dict}
+
+config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "reward": reward_dict, "training":training_dict}
 
 N_EPISODES = 10
 
 seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
 env = FlyNavigator(rng = rng, config = config_dict)
+
+
 model_path = os.path.join('..','trained_models', 'dqn_no_temp_first_round_redo_060223', '7after_8000000.zip')
 
 model = DQN.load(model_path, env = env)
