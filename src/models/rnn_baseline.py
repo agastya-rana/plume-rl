@@ -60,3 +60,5 @@ def test_model(config):
     print("Average reward: ", np.mean(render_env.all_episode_rewards))
     print("Average success: ", np.mean(render_env.all_episode_success))
     render_env.close()
+
+    
