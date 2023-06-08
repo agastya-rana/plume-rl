@@ -15,7 +15,6 @@ def train_model(config):
     training_dict = config['training']
     ## Define the environment here
     rng = np.random.default_rng(seed=0)
-    environment = FlyNavigator(rng, config)
     ## Define the model to be run
     model_class = training_dict["MODEL_CLASS"]
     # Create vectorized environments
@@ -61,4 +60,3 @@ def test_model(config):
     print("Average success: ", np.mean(render_env.all_episode_success))
     render_env.close()
 
-    
