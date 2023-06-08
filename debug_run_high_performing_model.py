@@ -82,7 +82,7 @@ config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "o
 
 N_EPISODES = 100
 
-seed = int(sys.argv[1])
+seed = 2
 rng = np.random.default_rng(seed)
 env = FlyNavigator(rng = rng, config = config_dict)
 model_path = os.path.join('..','trained_models', 'dqn_no_temp_first_round_redo_060223', '7after_8000000.zip')
@@ -103,6 +103,9 @@ for episode in range(0, N_EPISODES):
 
 	while not done:
 
+		print('frame num = ', env.odor_plume.frame_number)
+
+
 		action = model.predict(obs)[0]
 
 		new_row = np.zeros(num_cols)
@@ -114,6 +117,9 @@ for episode in range(0, N_EPISODES):
 		data_arr[count,:,episode] = new_row
 
 		obs, reward, done, info = env.step(action)
+
+		print('action = ', action)
+		print('done = ', done)
 
 		count+=1
 
