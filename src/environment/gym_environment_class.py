@@ -175,8 +175,8 @@ class FlyNavigator(Env):
 	def step(self, action):
 		## Step method in gym takes an action and returns the next state, reward, done, and info
 		## Store the following for shaping:
-		self.prev_theta = self.fly_spatial_parameters.theta
-		self.prev_conc = self.all_obs[0] ## assumes that the first observation is the concentration
+		self.prev_theta = copy.deepcopy(self.fly_spatial_parameters.theta)
+		self.prev_conc = copy.deepcopy(self.all_obs[0]) ## assumes that the first observation is the concentration
 		## Deal with actions that don't involve turning
 		if action == 0 or action == 3:
 			self.odor_plume.advance(rng=self.rng)
@@ -245,7 +245,7 @@ class FlyNavigator(Env):
 		## Potential shaping rewards
 		if self.conc_upwind_reward:
 			new_potential = -self.conc_upwind_reward*self.all_obs[0]*np.cos(self.fly_spatial_parameters.theta)
-			old_potential = -self.conc_upwind_reward*self.prev_conc*self.prev_theta
+			old_potential = -self.conc_upwind_reward*self.prev_conc*np.cos(self.prev_theta)
 			reward += self.gamma*new_potential - old_potential
 			
 		if self.conc_reward:

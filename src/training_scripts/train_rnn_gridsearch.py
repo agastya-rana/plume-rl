@@ -9,6 +9,14 @@ import numpy as np
 import gym
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import VecEnv
+import optuna
+from optuna.pruners import MedianPruner
+from stable_baselines3 import PPO
+from stable_baselines3.common.envs import DummyVecEnv
+import gym
+
+
+
 plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 plume_dict = {
     "MM_PER_PX": 0.2,
@@ -121,6 +129,60 @@ source_rewards = [1000, 10000, 10000]
 #actor_critic_layerss = [[32, 32], [64, 64], [64,]]
 
 num_possibilites = len(conc_upwind_rewards) * len(conc_rewards) * len(radial_rewards) * len(wall_penalties) * len(source_rewards)  ## 576
+
+def objective(trial):
+    training_dict = config_dict['training']
+    ## Define the environment here
+    rng = np.random.default_rng(seed=0)
+    ## Define the model to be run
+    model_class = training_dict["MODEL_CLASS"]
+    # Create vectorized environments
+    env = SubprocVecEnv([make_env(i, config_dict) for i in range(training_dict["N_ENVS"])])
+    env = VecMonitor(env)#, info_keywords=('ep_rew_mean', 'ep_len_mean')); can add these if add corresponding params to info dict in step function of environment
+    learning_rate = trial.suggest_loguniform('learning_rate', 1e-4, 1e-2)
+
+    model = PPO('MlpPolicy', env, learning_rate=learning_rate, verbose=0)
+    
+    for step in range(0, 10000, 100):
+        model.learn(total_timesteps=100)
+        
+        # Evaluate the model
+        mean_reward = evaluate(model, env)
+        
+        # Report intermediate objective value.
+        trial.report(mean_reward, step)
+        
+        # Handle pruning based on the intermediate value.
+        if trial.should_prune():
+            raise optuna.exceptions.TrialPruned()
+
+    return mean_reward
+
+def evaluate(model, env, num_episodes=5):
+    all_episode_rewards = []
+    for i in range(num_episodes):
+        episode_rewards = 0.0
+        obs = env.reset()
+        done = False
+        while not done:
+            action, _ = model.predict(obs)
+            obs, reward, done, info = env.step(action)
+            episode_rewards += reward
+        all_episode_rewards.append(episode_rewards)
+    mean_episode_reward = np.mean(all_episode_rewards)
+    return mean_episode_reward
+
+# Enable pruning and set n_jobs to -1 to use all cores
+study = optuna.create_study(direction='maximize', pruner=MedianPruner(), n_jobs=-1)
+study.optimize(objective, n_trials=100)
+
+best_params = study.best_params
+best_value = study.best_value
+print(f'Best value: {best_value}\nBest params: {best_params}')
+
+
+
+
 
 if __name__ == "__main__":
     ## Train the model
