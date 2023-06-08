@@ -329,33 +329,4 @@ class FlyNavigator(Env):
 	def close(self):
 		if self.video:
 			self.writer.close()
-<<<<<<< HEAD
 		super(FlyNavigator, self).close()
-=======
-		super(FlyNavigator, self).close()
-
-	def _get_additional_rewards(self):
-		# Get the current distance from the source
-		pos = self.fly_spatial_parameters.position
-		current_distance = np.linalg.norm(pos - self.source_location)
-		if current_distance < self.goal_radius:
-			self.done = True
-			self.reached_source = True
-			reward = self.source_reward
-			return reward
-		if self.impose_walls: #for giving penalty for hitting walls
-			outside = (pos[0] > self.wall_max_x) + (pos[0] < self.wall_min_x) + (pos[1] > self.wall_max_y) + (pos[1] < self.wall_min_y) #checking if out of bounds
-			if outside:
-				reward = self.wall_penalty
-				self.done = True
-				return reward
-
-		if self.use_radial_reward: #for giving reward for decreasing distance from source
-			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
-			non_zero_check = np.sum(non_zero_check)>0
-			reward = self.radial_reward_scale*(self.previous_distance-current_distance)*non_zero_check
-			self.previous_distance = copy.deepcopy(current_distance)
-			return reward
-
-		return 0
->>>>>>> Viraaj
