@@ -42,7 +42,7 @@ class OdorFeatures():
 
 		feature_func_map = {'conc': self.get_conc, 'grad': self.get_grad, 'hrc': self.get_hrc, 'conc_left': self.get_conc_left, 'conc_right': self.get_conc_right, 'intermittency': self.get_intermittency, 't_L': self.get_t_L, 
 		'conc_disc': self.get_conc_disc, 'grad_disc': self.get_grad_disc, 'hrc_disc': self.get_hrc_disc}
-		bounds_func_map = {'conc': [0, self.max_conc], 'grad': [-self.max_conc, self.max_conc], 'hrc': [-self.max_conc, self.max_conc], 'conc_left': [0, self.max_conc], 
+		bounds_func_map = {'conc': [0, self.max_conc], 'grad': [-self.max_conc, self.max_conc], 'hrc': [-self.max_conc*self.max_conc, self.max_conc*self.max_conc], 'conc_left': [0, self.max_conc], 
 		'conc_right': [0, self.max_conc], 'intermittency': [0, 1], 't_L': [0, self.max_t_L]}
 		normalize_bounds_func_map = {'conc': [0, 1], 'grad': [-1, 1], 'hrc': [-1, 1], 'conc_left': [0, 1], 'conc_right': [0, 1], 'intermittency': [0, 1], 't_L': [0, 1]}
 
@@ -212,13 +212,27 @@ class OdorFeatures():
 		self.t_L = 1000.
 		self.odor_bin = False
 	
-	def static_sensor(self, theta_set, pos_set, duration):
-		pass
+	def static_sensor(self, pos_set, odor_frame, theta=np.pi): ## default is upwind
+		## Problem with this separate approach is that func evals depend on the regular class variables - can't define new ones here
+		self.std_left_box, self.std_right_box = self._make_L_R_std_box(mm_per_px = self.mm_per_px, antenna_height_mm = agent_dict['ANTENNA_LENGTH_MM'], antenna_width_mm = agent_dict['ANTENNA_WIDTH_MM'])
+
 		if self.static_sensor is None:
-			pos_arr = np.tile(pos, (self.num_pts,1))
-			self.left_pts = self._rotate_points(self.std_left_box, theta) + pos_arr
-			self.right_pts = self._rotate_points(self.std_right_box, theta) + pos_arr
+			self.left_sensors = self._rotate_points(self.std_left_box, theta)[None, :] + pos_set[:, None, :]
+			self.right_sensors = self._rotate_points(self.std_right_box, theta)[None, :] + pos_set[:, None, :]
+		self.left_sensor_idxs = np.rint(self.left_pts/self.mm_per_px).astype(int)
+		self.right_sensor_idxs = np.rint(self.right_pts/self.mm_per_px).astype(int)
+		try:
+			self.left_sensor_vals = odor_frame[self.left_sensor_idxs[:,0], self.left_sensor_idxs[:,1]]
+		except IndexError:
+			self.left_sensor_vals = np.zeros(self.num_pts) ## If the agent is out of bounds, then the odor is zero.
+		try:
+			self.right_sensor_vals = odor_frame[self.right_sensor_idxs[:,0], self.right_sensor_idxs[:,1]]
+		except IndexError:
+			self.right_sensor_vals = np.zeros(self.num_pts)
+		self.mean_left_sensor = np.mean(self.left_sensor_vals, axis=1)
+		self.mean_right_sensor = np.mean(self.right_sensor_vals, axis=1)
+
 		## Returns the odor features requested in the order of state_dict['features']
-		self._rotate_and_translate_sensors(theta = theta, pos = pos)
-		self._get_left_right_odors(odor_frame=odor_frame)
-		return self.get_features()
+		#self._rotate_and_translate_sensors(theta = theta, pos = pos)
+		#self._get_left_right_odors(odor_frame=odor_frame)
+		#return self.get_features()

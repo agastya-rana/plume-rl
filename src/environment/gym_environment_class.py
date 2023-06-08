@@ -106,7 +106,7 @@ class FlyNavigator(Env):
 		self.conc_upwind_reward = reward_dict['CONC_UPWIND_REWARD'] if self.potential_shaping else 0
 		self.conc_reward = reward_dict['CONC_REWARD'] if self.potential_shaping else 0
 		self.motion_reward = reward_dict['MOTION_REWARD'] if self.potential_shaping else 0
-	
+		self.radial_reward = reward_dict['RADIAL_REWARD']
 		
 		if self.impose_walls:
 			self.wall_penalty = reward_dict['WALL_PENALTY']
@@ -114,11 +114,7 @@ class FlyNavigator(Env):
 			self.wall_min_x = reward_dict['WALL_MIN_X_MM']
 			self.wall_min_y = reward_dict['WALL_MIN_Y_MM']
 			self.wall_max_y = reward_dict['WALL_MAX_Y_MM']
-
-		self.use_radial_reward = reward_dict['USE_RADIAL_REWARD']
-		if self.use_radial_reward:
-			self.radial_reward_scale = reward_dict['RADIAL_REWARD_SCALE']
-
+			
 		## Misc
 		self.rng = rng
 		self.record_success = output_dict['RECORD_SUCCESS']
@@ -175,16 +171,16 @@ class FlyNavigator(Env):
 
 	def step(self, action):
 		## Step method in gym takes an action and returns the next state, reward, done, and info
-		self.odor_plume.advance(rng=self.rng)
 		## Store the following for shaping:
 		self.prev_theta = self.fly_spatial_parameters.theta
 		self.prev_conc = self.all_obs[0] ## assumes that the first observation is the concentration
 		## Deal with actions that don't involve turning
 		if action == 0 or action == 3:
+			self.odor_plume.advance(rng=self.rng)
 			self.fly_spatial_parameters.update_params(action)
 			self._update_state()
 			reward = self.per_step_reward
-			if self.odor_plume.frame_number >= self.max_frames:		
+			if self.odor_plume.frame_number == self.max_frames:	
 				self.done = True
 		
 		## Deal with actions that involve turning (1 is left, 2 is right)
@@ -194,13 +190,13 @@ class FlyNavigator(Env):
 			num_steps = int(turn_dur/self.dt)
 			reward = 0
 			## Note that by virtue of this 'turn time' being implemented in the step method, flies cannot learn information during a turn
-			for i in range(0, num_steps):
+			for _ in range(num_steps):
 				self.odor_plume.advance(rng = self.rng)
 				#print('in turn frame number = ', self.odor_plume.frame_number)
 				self.fly_spatial_parameters.update_params(action)
 				reward += self.per_step_reward
 				self._update_state()
-				if self.odor_plume.frame_number >= self.max_frames:				
+				if self.odor_plume.frame_number == self.max_frames:				
 					self.done = True
 					break
 			self.num_turns += 1
@@ -237,10 +233,10 @@ class FlyNavigator(Env):
 				self.done = True
 				return reward
 
-		if self.use_radial_reward: #for giving reward for decreasing distance from source
+		if self.radial_reward: #for giving reward for decreasing distance from source
 			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
 			non_zero_check = np.sum(non_zero_check)>0
-			reward = self.radial_reward_scale*(self.previous_distance-current_distance)*non_zero_check
+			reward = self.radial_reward*(self.previous_distance-current_distance)*non_zero_check
 			self.previous_distance = copy.deepcopy(current_distance)
 
 		## Potential shaping rewards
@@ -292,8 +288,6 @@ class FlyNavigator(Env):
 		#self.ax.scatter(*self.fly_spatial_parameters.position, color='red')
 		#self.ax.add_patch(patches.Arrow(*self.fly_spatial_parameters.position, np.cos(self.fly_spatial_parameters.theta), np.sin(self.fly_spatial_parameters.theta), width=0.5, head_width=4, color='red'))
 		# Plot the trajectory of the fly
-
-		## TODO: change these lines to reset trajectories at the end of an episode
 		self.fly_trajectory[self.trajectory_number] = self.fly_spatial_parameters.position
 		self.trajectory_number += 1
 		self.ax.plot(*zip(*self.fly_trajectory), color='cyan')

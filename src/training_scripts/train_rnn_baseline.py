@@ -9,8 +9,7 @@ import numpy as np
 import gym
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import VecEnv
-plume_movie_path = os.path.join('.', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
-
+plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 plume_dict = {
     "MM_PER_PX": 0.2,
     "MAX_CONCENTRATION": 255,
@@ -33,7 +32,7 @@ plume_dict = {
 state_dict = {
     "USE_COSINE_AND_SIN_THETA": True,
     "DISCRETE_OBSERVABLES": False,
-    "FEATURES": ['conc', 'grad', 'hrc', 'intermittency', 't_L'], ## see OdorFeatures class for options,
+    "FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
     "NORMALIZE_ODOR_FEATURES": True,
 	"CONCENTRATION_BASE_THRESHOLD": 100, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
@@ -45,7 +44,7 @@ state_dict = {
 output_dict = {
     "RENDER_VIDEO": 'rnn.mp4', ## name of video file to render to
     'RECORD_SUCCESS': False, ## whether to record rewards and number of successful episodes
-    'SAVE_DIRECTORY': os.path.join('.', 'src', 'trained_models') ## directory to save model
+    'SAVE_DIRECTORY': os.path.join('..', 'trained_models') ## directory to save model
 }
 
 agent_dict = {

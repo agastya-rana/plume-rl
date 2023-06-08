@@ -10,4 +10,4 @@
 
 eval "$(conda shell.bash hook)"
 conda activate EmonetLab
-python src/training_scripts/train_rnn_baseline.py $SLURM_ARRAY_TASK_ID
+python ../src/training_scripts/train_rnn_baseline.py $SLURM_ARRAY_TASK_ID

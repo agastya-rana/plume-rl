@@ -31,19 +31,15 @@ class OdorPlumeFromMovie:
         self.frame = self.loaded_movie[:,:,self.frame_number-self.start_frame]
 
     def advance(self, rng):
-
-        if self.frame_number >= self.stop_frame:
-            self.reset(rng)
+        if self.load:
+            self.frame = self.loaded_movie[:,:,self.frame_number - self.start_frame]
+            if self.flip:
+                self.frame = np.flip(self.frame, axis=1)
         else:
-            if self.load:
-                self.frame = self.loaded_movie[:,:,self.frame_number - self.start_frame]
-                if self.flip:
-                    self.frame = np.flip(self.frame, axis=1)
-            else:
-                self.frame = self.read_frame()
-                if self.flip:
-                    self.frame = np.flip(self.frame, axis=1)
-            self.frame_number += 1
+            self.frame = self.read_frame()
+            if self.flip:
+                self.frame = np.flip(self.frame, axis=1)
+        self.frame_number += 1
 
     def get_previous_frame(self):
         frame = self.loaded_movie[:,:,self.frame_number - self.start_frame - 1]
@@ -57,7 +53,7 @@ class OdorPlumeFromMovie:
         frame[frame==1]=0 #because off plume seems to all be 1 and we want it to be 0
         return frame
     
-    def pick_random_frame(self, delay=10):
-        self.frame_number = np.random.randint(self.start_frame, self.stop_frame-delay)
+    def pick_random_frame(self, rng, delay=10):
+        self.frame_number = np.random.randint(self.start_frame, self.stop_frame-delay-1)
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.frame_number)
-        _, self.frame = self.video_capture.read()
+        self.advance(rng)

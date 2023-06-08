@@ -96,3 +96,5 @@ training_runs/
 
 ## Logs shouldn't get committed
 logs/
+
+slurm/

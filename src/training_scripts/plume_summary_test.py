@@ -70,7 +70,7 @@ training_dict = {}
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}
 
-rbins = [0, 10, 20]
+rbins = [20*i for i in range(8)]
 thetabins = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
-summary = PlumeSummary(config_dict, rbins, thetabins, n_points=100)
-summary.plot()
+summary = PlumeSummary(config_dict, rbins, thetabins, n_points=500, samples_per_point=500)
+summary.plot(ptype='heatmap')
