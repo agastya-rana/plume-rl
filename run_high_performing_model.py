@@ -77,8 +77,10 @@ reward_dict = {
 	"RADIAL_REWARD_SCALE": 5,
 }
 
+training_dict = {"GAMMA":0.99}
 
-config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "reward": reward_dict}
+
+config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "reward": reward_dict, "training":training_dict}
 
 N_EPISODES = 100
 
