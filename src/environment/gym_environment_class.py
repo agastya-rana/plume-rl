@@ -245,7 +245,7 @@ class FlyNavigator(Env):
 		## Potential shaping rewards
 		if self.conc_upwind_reward:
 			new_potential = -self.conc_upwind_reward*self.all_obs[0]*np.cos(self.fly_spatial_parameters.theta)
-			old_potential = -self.conc_upwind_reward*self.prev_conc*self.prev_theta
+			old_potential = -self.conc_upwind_reward*self.prev_conc*np.cos(self.prev_theta)
 			reward += self.gamma*new_potential - old_potential
 			
 		if self.conc_reward:
