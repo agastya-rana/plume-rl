@@ -18,7 +18,6 @@ plume_dict = {
     "MM_PER_PX": 0.2,
     "MAX_CONCENTRATION": 255,
     "PLUME_TYPE": 'ribbon',
-    "MOVIE_PATH": plume_movie_path,
     "RIBBON_SPREAD_MM": 10,
     "FRAME_X_MM": 330,
     "FRAME_Y_MM": 180,
