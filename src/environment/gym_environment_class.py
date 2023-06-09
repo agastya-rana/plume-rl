@@ -258,7 +258,7 @@ class FlyNavigator(Env):
 			reward += self.gamma*new_potential - old_potential
 
 		if self.upwind_reward:
-			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 
+			non_zero_check = (np.sum(self.all_obs[:self.num_odor_obs] != 0) >0)
 			new_potential = -self.upwind_reward*non_zero_check*np.cos(self.fly_spatial_parameters.theta)
 			old_potential = -self.upwind_reward*non_zero_check*np.cos(self.prev_theta)
 			reward += self.gamma*new_potential - old_potential
