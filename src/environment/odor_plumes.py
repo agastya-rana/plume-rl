@@ -63,3 +63,30 @@ class OdorPlumeFromMovie:
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.frame_number)
         self.advance(rng)
 
+class StaticGaussianRibbon:
+
+    def __init__(self, config):
+        plume_dict = config['plume']
+        self.sigma = config['RIBBON_SPREAD_MM']
+        self.frame_x = config['FRAME_X_MM']
+        self.frame_y = config['FRAME_Y_MM']
+        self.mm_per_px = config['MM_PER_PX']
+        self.source_conc = config['MAX_CONCENTRATION']
+        self.source_location: np.ndarray = plume_dict['SOURCE_LOCATION_MM']
+        dim_x = np.rint(self.frame_x/self.mm_per_px)
+        dim_y = np.rint(self.frame_y/self.mm_per_px)
+        y_list = self.mm_per_px*np.arange(0,dim_y)
+        y_coords = np.tile(y_list, (dim_x,1))
+        self.frame = self.source_conc*np.exp((-(y_coords-self.source_location[1])**2)/(2*self.sigma**2))
+
+    def advance(self, rng):
+
+        return
+
+    def reset(self. rng):
+
+        return
+
+
+
+

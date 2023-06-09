@@ -13,19 +13,19 @@ from stable_baselines3 import DQN
 from stable_baselines3.common.vec_env import VecEnv
 import stable_baselines3.common.utils
 
-plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 
 plume_dict = {
     "MM_PER_PX": 0.2,
     "MAX_CONCENTRATION": 255,
-    "PLUME_TYPE": 'movie',
+    "PLUME_TYPE": 'ribbon',
     "MOVIE_PATH": plume_movie_path,
-	"MIN_FRAME": 500,
-	"STOP_FRAME": 5000,
-	"RESET_FRAME_RANGE": np.array([501, 800]),
+    "RIBBON_SPREAD_MM": 10,
+    "FRAME_X_MM": 330,
+    "FRAME_Y_MM": 180,
+    "SOURCE_CONC": 1,
 	"SOURCE_LOCATION_MM": np.array([30,90]),
     "MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
-	"INITIAL_MAX_RESET_X_MM": 300,
+	"INITIAL_MAX_RESET_X_MM": 45,
 	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
 	"MIN_RESET_Y_MM": 0,
 	"MAX_RESET_Y_MM": 180,
@@ -33,7 +33,7 @@ plume_dict = {
 	"RESET_X_SHIFT_MM": 5,
     "INIT_THETA_MIN": 0,
 	"INIT_THETA_MAX": 2*np.pi,
-	"PX_THRESHOLD": 100,
+	"PX_THRESHOLD": 0.01,
 }
 
 state_dict = {

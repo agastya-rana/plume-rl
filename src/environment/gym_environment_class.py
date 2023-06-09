@@ -104,8 +104,10 @@ class FlyNavigator(Env):
 		self.potential_shaping = reward_dict['POTENTIAL_SHAPING']
 		 ## dict of potential shaping parameters; keys in [conc_penalty, conc_upwind, downwind, motion]
 		self.conc_upwind_reward = reward_dict['CONC_UPWIND_REWARD'] if self.potential_shaping else 0
+		self.upwind_reward = reward_dict['UPWIND_REWARD'] if self.potential_shaping else 0
 		self.conc_reward = reward_dict['CONC_REWARD'] if self.potential_shaping else 0
 		self.motion_reward = reward_dict['MOTION_REWARD'] if self.potential_shaping else 0
+		
 		self.radial_reward = reward_dict['RADIAL_REWARD']
 		
 		if self.impose_walls:
@@ -246,6 +248,12 @@ class FlyNavigator(Env):
 		if self.conc_upwind_reward:
 			new_potential = -self.conc_upwind_reward*self.all_obs[0]*np.cos(self.fly_spatial_parameters.theta)
 			old_potential = -self.conc_upwind_reward*self.prev_conc*np.cos(self.prev_theta)
+			reward += self.gamma*new_potential - old_potential
+
+		if self.upwind_reward:
+			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 
+			new_potential = -self.upwind_reward*non_zero_check*np.cos(self.fly_spatial_parameters.theta)
+			old_potential = -self.upwind_reward*non_zero_check*np.cos(self.prev_theta)
 			reward += self.gamma*new_potential - old_potential
 			
 		if self.conc_reward:
