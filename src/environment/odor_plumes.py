@@ -87,7 +87,7 @@ class StaticGaussianRibbon:
 
         return
 
-    def reset(self. rng):
+    def reset(self, rng):
 
         return
 
