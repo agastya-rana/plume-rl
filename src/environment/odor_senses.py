@@ -49,7 +49,6 @@ class OdorFeatures():
 
 		self.mm_per_px = plume_dict['MM_PER_PX']
 		self.std_left_box, self.std_right_box = self._make_L_R_std_box(mm_per_px = self.mm_per_px, antenna_height_mm = agent_dict['ANTENNA_LENGTH_MM'], antenna_width_mm = agent_dict['ANTENNA_WIDTH_MM'])
-		self.use_movie = not (plume_dict['MOVIE_PATH'] is None)
 		self.num_pts = np.shape(self.std_left_box)[0]
 
 		self.func_evals = [feature_func_map[feat] for feat in self.features]
