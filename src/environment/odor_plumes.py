@@ -87,7 +87,11 @@ class StaticGaussianRibbon:
 
         return
 
-    def reset(self, rng):
+    def reset(self, flip, rng):
+
+        if flip:
+
+            self.frame = np.flip(self.frame, axis = 1) #should be symmetric and not matter but just in case of rounding asymmetries
 
         return
 
