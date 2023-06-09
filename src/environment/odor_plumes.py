@@ -67,11 +67,11 @@ class StaticGaussianRibbon:
 
     def __init__(self, config):
         plume_dict = config['plume']
-        self.sigma = config['RIBBON_SPREAD_MM']
-        self.frame_x = config['FRAME_X_MM']
-        self.frame_y = config['FRAME_Y_MM']
-        self.mm_per_px = config['MM_PER_PX']
-        self.source_conc = config['MAX_CONCENTRATION']
+        self.sigma = plume_dict['RIBBON_SPREAD_MM']
+        self.frame_x = plume_dict['FRAME_X_MM']
+        self.frame_y = plume_dict['FRAME_Y_MM']
+        self.mm_per_px = plume_dict['MM_PER_PX']
+        self.source_conc = plume_dict['MAX_CONCENTRATION']
         self.source_location: np.ndarray = plume_dict['SOURCE_LOCATION_MM']
         self.max_frames = plume_dict['STOP_FRAME']
         self.frame_number = 0
