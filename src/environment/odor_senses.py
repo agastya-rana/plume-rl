@@ -101,15 +101,14 @@ class OdorFeatures():
 		self.left_idxs = np.rint(self.left_pts/self.mm_per_px).astype(int)
 		self.right_idxs = np.rint(self.right_pts/self.mm_per_px).astype(int)
 
-		if self.use_movie:
-			try: 
-				self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
-			except IndexError:
-				self.left_odors = np.zeros(self.num_pts) ## If the agent is out of bounds, then the odor is zero.
-			try:
-				self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
-			except IndexError:
-				self.right_odors = np.zeros(self.num_pts)
+		try: 
+			self.left_odors = odor_frame[self.left_idxs[:,0], self.left_idxs[:,1]]
+		except IndexError:
+			self.left_odors = np.zeros(self.num_pts) ## If the agent is out of bounds, then the odor is zero.
+		try:
+			self.right_odors = odor_frame[self.right_idxs[:,0], self.right_idxs[:,1]]
+		except IndexError:
+			self.right_odors = np.zeros(self.num_pts)
 
 		self.mean_left_odor = np.mean(self.left_odors)
 		self.mean_right_odor = np.mean(self.right_odors)
