@@ -114,22 +114,26 @@ learning_rate = stable_baselines3.common.utils.get_linear_fn(start = training_di
 model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=None, gamma = training_dict['GAMMA'], 
 	exploration_final_eps = training_dict['MIN_EPSILON'], seed = seed, learning_rate=learning_rate)
 
-#make these directories
 
-save_steps = plume_dict['STOP_FRAME'] #roughly after every episode
+class CustomCallback(BaseCallback):
 
-for i in range(0, training_dict['N_EPISODES']):
+	def __init__(self, save_freq, save_dir):
 
-	model.learn(total_timesteps=save_steps, reset_num_timesteps=False, tb_log_name = str(seed)+"_DQN_model")
-	np.save('models/'+str(seed)+"_reward_history.npy", np.array(environment.all_episode_rewards))
-	np.save('models/'+str(seed)+"_success_history.npy", np.array(environment.all_episode_success))
+		self.save_freq = save_freq
+		self.save_dir = save_dir
 
-	ep_num = len(environment.all_episode_rewards)
+    def _on_step(self) -> bool:
+        if self.n_calls % self.check_freq == 0:
+        	n_eps = len(self.training_env.all_episode_rewards)
+        	save_string = "after_"+str(n_eps)
+        	self.model.save(save_dir+save_string)
 
-	if i % 500 == 0:
 
-		model.save(models_dir+str(seed)+'after_'+str(ep_num))
+callback = CustomCallback(save_freq = 500000, save_dir = 'models/')
 
+model.learn(total_timesteps=25000000, reset_num_timesteps=False, callback=callback)
+np.save('models/'+str(seed)+"_reward_history.npy", np.array(environment.all_episode_rewards))
+np.save('models/'+str(seed)+"_success_history.npy", np.array(environment.all_episode_success))
 
 
 
