@@ -73,8 +73,15 @@ class FlyNavigator(Env):
 		self.dt = agent_dict['DELTA_T_S']
 		
 		## Define odor plume parameters
-		self.odor_plume = OdorPlumeFromMovie(config) ## Defines the odor plume the fly is navigating in.
-		self.max_frames = plume_dict['STOP_FRAME']
+		if plume_dict['PLUME_TYPE'] == 'movie':
+			self.odor_plume = OdorPlumeFromMovie(config) ## Defines the odor plume the fly is navigating in.
+			self.max_frames = plume_dict['STOP_FRAME']
+		
+		elif plume_dict['PLUME_TYPE'] == 'ribbon':
+
+			self.odor_plume = StaticGaussianRibbon(plume_dict)
+			self.max_frames = plume_dict['STOP_FRAME']
+
 		self.source_location = plume_dict['SOURCE_LOCATION_MM']
 		self.mm_per_px = plume_dict['MM_PER_PX']
 		self.conc_threshold = state_dict['CONCENTRATION_BASE_THRESHOLD']
