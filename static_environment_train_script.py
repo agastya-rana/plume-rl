@@ -81,6 +81,7 @@ reward_dict = {
 	"POTENTIAL_SHAPING": True,
 	"UPWIND_REWARD": 1,
 	"CONC_REWARD": 0,
+	"CONC_UPWIND_REWARD":0,
 	"MOTION_REWARD": 0
 }
 
