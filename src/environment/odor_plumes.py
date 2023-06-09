@@ -93,6 +93,8 @@ class StaticGaussianRibbon:
 
             self.frame = np.flip(self.frame, axis = 1) #should be symmetric and not matter but just in case of rounding asymmetries
 
+        self.frame_number = 0
+
         return
 
 
