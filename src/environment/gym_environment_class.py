@@ -79,7 +79,7 @@ class FlyNavigator(Env):
 		
 		elif plume_dict['PLUME_TYPE'] == 'ribbon':
 
-			self.odor_plume = StaticGaussianRibbon(plume_dict)
+			self.odor_plume = StaticGaussianRibbon(config)
 			self.max_frames = plume_dict['STOP_FRAME']
 
 		self.source_location = plume_dict['SOURCE_LOCATION_MM']
