@@ -12,6 +12,7 @@ import gym
 from stable_baselines3 import DQN
 from stable_baselines3.common.vec_env import VecEnv
 import stable_baselines3.common.utils
+from stable_baselines3.common.callbacks import BaseCallback
 
 
 plume_dict = {
