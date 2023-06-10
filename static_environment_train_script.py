@@ -119,6 +119,7 @@ class CustomCallback(BaseCallback):
 
 	def __init__(self, save_freq, save_dir):
 
+		super(CustomCallback, self).__init__(verbose)
 		self.save_freq = save_freq
 		self.save_dir = save_dir
 
