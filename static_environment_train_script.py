@@ -118,7 +118,7 @@ model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=None, gamma =
 
 class CustomCallback(BaseCallback):
 
-	def __init__(self, save_freq, save_dir):
+	def __init__(self, save_freq, save_dir, verbose=True):
 
 		super(CustomCallback, self).__init__(verbose)
 		self.save_freq = save_freq
