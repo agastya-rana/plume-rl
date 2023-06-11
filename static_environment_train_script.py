@@ -91,7 +91,7 @@ training_dict = {
 "MIN_ALPHA": 0.001,
 "GAMMA": 0.99,
 "MIN_EPSILON":0.01,
-"LEARNING_END_FRACTION": 2/3,
+"LEARNING_END_FRACTION": 1/3,
 "LOGDIR": 'logs',
 "N_EPISODES": 10000,
 "model_name": 'DQN_no_temp'
@@ -118,25 +118,28 @@ model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=None, gamma =
 
 class CustomCallback(BaseCallback):
 
-	def __init__(self, save_freq, save_dir, seed = seed, verbose=True):
+	def __init__(self, env, save_freq, save_dir, seed = seed, verbose=True):
 
 		super(CustomCallback, self).__init__(verbose)
 		self.save_freq = save_freq
 		self.save_dir = save_dir
 		self.seed = seed
+		self.env = env
 
 	def _on_step(self) -> bool:
 		if self.n_calls % self.save_freq == 0:
-			n_eps = len(self.model.env.all_episode_rewards)
+			n_eps = len(self.env.all_episode_rewards)
+			print('n eps = ', n_eps)
 			save_string = str(self.seed)+"_after_"+str(n_eps)
 			self.model.save(self.save_dir+save_string)
-			np.save(self.save_dir+str(self.seed)+"_reward_history.npy", np.array(self.model.env.all_episode_rewards))
-			np.save(self.save_dir+str(self.seed)+"_success_history.npy", np.array(self.model.env.all_episode_success))
+			np.save(self.save_dir+str(self.seed)+"_reward_history.npy", np.array(self.env.all_episode_rewards))
+			np.save(self.save_dir+str(self.seed)+"_success_history.npy", np.array(self.env.all_episode_success))
 
 
-callback = CustomCallback(save_freq = 500000, save_dir = 'models/')
+callback = CustomCallback(env = environment, save_freq = 500000, save_dir = 'models/')
 
 model.learn(total_timesteps=25000000, reset_num_timesteps=False, callback=callback)
+
 
 
 
