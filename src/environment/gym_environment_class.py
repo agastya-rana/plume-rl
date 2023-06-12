@@ -13,7 +13,6 @@ from src.environment.odor_plumes import *
 from src.environment.odor_senses import *
 
 class FlyNavigator(Env):
-
 	"""
 	An OpenAI Gym Environment for a fly navigating in an odor plume. Environment
 	is defined by the step and rest methods. The step method takes an action and
@@ -93,27 +92,24 @@ class FlyNavigator(Env):
 		
 		## Render parameters
 		self.fig, self.ax = plt.subplots()
-		self.video = not (output_dict['RENDER_VIDEO'] is None) ## Whether or not to render a video of the fly's trajectory
-		self.writer = imageio.get_writer(os.path.join(output_dict['SAVE_DIRECTORY'], training_dict['model_name']+".mp4"), fps=60) if self.video else None
+		self.video = output_dict['RENDER_VIDEO'] ## Whether or not to render a video of the fly's trajectory
+		self.writer = imageio.get_writer(os.path.join(output_dict['SAVE_DIRECTORY'], training_dict['MODEL_NAME']+".mp4"), fps=60) if self.video else None
 
 		## Reward shaping parameters
 		reward_dict = config['reward']
 		self.source_reward = reward_dict['SOURCE_REWARD']
 		self.per_step_reward = reward_dict['PER_STEP_REWARD']
-		self.impose_walls = reward_dict['IMPOSE_WALLS']
-		self.potential_shaping = reward_dict['POTENTIAL_SHAPING']
-		 ## dict of potential shaping parameters; keys in [conc_penalty, conc_upwind, downwind, motion]
-		self.conc_upwind_reward = reward_dict['CONC_UPWIND_REWARD'] if self.potential_shaping else 0
-		self.conc_reward = reward_dict['CONC_REWARD'] if self.potential_shaping else 0
-		self.motion_reward = reward_dict['MOTION_REWARD'] if self.potential_shaping else 0
+		## dict of potential shaping parameters; keys in [conc_penalty, conc_upwind, downwind, motion]
+		self.conc_upwind_reward = reward_dict['CONC_UPWIND_REWARD']
+		self.conc_reward = reward_dict['CONC_REWARD']
+		self.motion_reward = reward_dict['MOTION_REWARD']
 		self.radial_reward = reward_dict['RADIAL_REWARD']
 		
-		if self.impose_walls:
-			self.wall_penalty = reward_dict['WALL_PENALTY']
-			self.wall_max_x = reward_dict['WALL_MAX_X_MM']
-			self.wall_min_x = reward_dict['WALL_MIN_X_MM']
-			self.wall_min_y = reward_dict['WALL_MIN_Y_MM']
-			self.wall_max_y = reward_dict['WALL_MAX_Y_MM']
+		self.wall_penalty = reward_dict['WALL_PENALTY']
+		self.wall_max_x = reward_dict['WALL_MAX_X_MM']
+		self.wall_min_x = reward_dict['WALL_MIN_X_MM']
+		self.wall_min_y = reward_dict['WALL_MIN_Y_MM']
+		self.wall_max_y = reward_dict['WALL_MAX_Y_MM']
 			
 		## Misc
 		self.rng = rng
@@ -168,7 +164,6 @@ class FlyNavigator(Env):
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, 
 			pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame) ## Update the odor features at initalized fly location
-		self.odor_features.update_hist()
 		self.all_obs[:self.num_odor_obs] = odor_obs
 		self._add_theta_observation()
 
@@ -229,7 +224,7 @@ class FlyNavigator(Env):
 			self.reached_source = True
 			reward = self.source_reward
 			return reward
-		if self.impose_walls: #for giving penalty for hitting walls
+		if self.wall_penalty: #for giving penalty for hitting walls
 			outside = (pos[0] > self.wall_max_x) + (pos[0] < self.wall_min_x) + (pos[1] > self.wall_max_y) + (pos[1] < self.wall_min_y) #checking if out of bounds
 			if outside:
 				reward = self.wall_penalty
@@ -239,7 +234,7 @@ class FlyNavigator(Env):
 		if self.radial_reward: #for giving reward for decreasing distance from source
 			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
 			non_zero_check = np.sum(non_zero_check)>0
-			reward = self.radial_reward*(self.previous_distance-current_distance)*non_zero_check
+			reward += self.radial_reward*(self.previous_distance-current_distance)*non_zero_check
 			self.previous_distance = copy.deepcopy(current_distance)
 
 		## Potential shaping rewards

@@ -5,17 +5,18 @@
 
 import numpy as np
 import gym
-from gym_environment_class import FlyNavigator
+from src.environment.gym_environment_class import FlyNavigator
 from gym.spaces import Box, Discrete, MultiDiscrete
 import copy
 
 class IntegratedTimestepsNavigator(FlyNavigator):
-	def __init__(self, integrated_dt=0.1, features_filter_type='exp', features_filter_size=5, **kwargs):
-		super().__init__(**kwargs)
-		self.integrated_dt = integrated_dt
-		self.advance_timesteps = int(self.integrated_dt/self.dt)
-		self.features_filter_size = features_filter_size
-		self.features_filter_type = features_filter_type
+	def __init__(self, rng, config):
+		# integrated_dt=0.1, features_filter_type='exp', features_filter_size=5,
+		super().__init__(rng, config)
+		self.integrated_dt = config["agent"]["INTEGRATED_DT"]
+		self.features_filter_size = config["agent"]["FEATURES_FILTER_SIZE"]
+		self.advance_timesteps = int(self.integrated_dt/self.dt) ## This should be an exact multiple
+		assert self.advance_timesteps*self.dt == self.integrated_dt
 		self.filtered_obs = np.zeros((self.num_odor_obs,))
 	
 	def step(self, action):
@@ -76,14 +77,15 @@ class IntegratedTimestepsNavigator(FlyNavigator):
 		self._add_theta_observation()
 
 class HistoryNavigator(FlyNavigator):
-	def __init__(self, history_len=5, store_angles=False, **kwargs):
-		super().__init__(**kwargs)
-		self.history_len = history_len ## note that this doesn't include the current observation
+	def __init__(self, rng, config):
+		super().__init__(rng, config)
+		self.history_len = config["state"]["HIST_LEN"] ## note that this doesn't include the current observation
 		self.history = np.zeros((self.num_odor_obs, self.history_len))
 		## all_obs initialization depends on whether we use sin cos or not
-		self.all_obs = np.zeros((self.num_odor_obs*(self.history_len+1),))
-		self.store_angles = store_angles ## If true, store the fly angle history too TODO: implement this
+		self.store_angles = False ## If true, store the fly angle history too TODO: implement this
 		## In the following, I am leaving self.observables (names of observed features) unchanged; hopefully this doesn't mess up any other functions that call this
+		self.theta_dim = 2 if self.use_cos_and_sin else 1
+		self.obs_dim = self.num_odor_obs*(self.history_len+1) + self.theta_dim ## 2 for cos and sin theta, 1 for theta
 		if self.discrete_obs:
 			all_obs_inds = copy.deepcopy(self.odor_features.discretization_index)*(self.history_len+1)
 			all_obs_inds.append(self.theta_discretization) #note that for discretized states it doesn't make sense to split into sin and cos so this assumes only 1 theta observable
@@ -94,9 +96,6 @@ class HistoryNavigator(FlyNavigator):
 			else:
 				self.observable_bounds = np.vstack((self.odor_features.feat_bounds,)*(self.history_len+1) +  (np.array([[0, 2*np.pi]]),)) ## bounds for theta
 			self.observation_space = Box(low=self.observable_bounds[:, 0], high=self.observable_bounds[:, 1])
-		
-		self.theta_dim = 2 if self.use_cos_and_sin else 1
-		self.obs_dim = self.num_odor_obs*(self.history_len+1)  ## 2 for cos and sin theta, 1 for theta
 		## We use convention where most recent observation is first in the array (see _update_state)
 		self.all_obs = np.zeros(self.obs_dim).astype(int) if self.discrete_obs else np.zeros(self.obs_dim).astype('float32') ## Initialize all observables to 0
 	
@@ -105,7 +104,7 @@ class HistoryNavigator(FlyNavigator):
 		## Add the current observation to the history, and remove the oldest observation
 		self.history = np.roll(self.history, 1, axis=0)
 		self.history[:,0] = self.all_obs[:self.num_odor_obs]
-		super().step(action)
+		return super().step(action)
 	
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, 

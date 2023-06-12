@@ -1,5 +1,6 @@
 from sb3_contrib import RecurrentPPO
 from src.environment.gym_environment_class import *
+from src.environment.env_variations import *
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 import os
 import numpy as np
@@ -7,14 +8,16 @@ import numpy as np
 # Helper function to create environments
 def make_env(i, config_dict):
     def _init():
-        return FlyNavigator(np.random.default_rng(seed=i), config_dict)
+        if config_dict["agent"]["INT_TIMESTEP"]:
+            return IntegratedTimestepsNavigator(np.random.default_rng(seed=i), config_dict)
+        else:
+            return FlyNavigator(np.random.default_rng(seed=i), config_dict)
     return _init
 
 
 def train_model(config):
     training_dict = config['training']
     ## Define the environment here
-    rng = np.random.default_rng(seed=0)
     ## Define the model to be run
     model_class = training_dict["MODEL_CLASS"]
     # Create vectorized environments
@@ -42,11 +45,18 @@ def test_model(config):
     # Episode start signal
     episode_start = True
     episode_no = 0
-    ## TODO: Store the state variables and actions per timestep in an array. Also, only render for the first 10 episodes.
+    num_record = config["output"]["RECORD_STATE_ACTION"]
+    state_arr = np.empty((num_record, config["plume"]["STOP_FRAME"], render_env.obs_dim))
+    action_arr = np.empty((num_record, config["plume"]["STOP_FRAME"], 4))
     while episode_no < config["training"]['TEST_EPISODES']:
         action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
+        if episode_no < num_record:
+            ## Store state and action
+            state_arr[episode_no, render_env.pdor_plume.frame_number, :] = obs
+            action_arr[episode_no, render_env.pdor_plume.frame_number, :] = action
         obs, _, done, _ = render_env.step(action)
-        render_env.render()
+        if episode_no < 10:
+            render_env.render()
         # If the episode is done, reset the environment (for vector environments, we don't need to reset manually)
         if done:
             obs = render_env.reset()
@@ -56,7 +66,9 @@ def test_model(config):
             episode_start = False
     np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_reward_history.npy"), np.array(render_env.all_episode_rewards))
     np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_success_history.npy"), np.array(render_env.all_episode_success))
+    ## Save state and action arrays
+    np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_state_history.npy"), state_arr)
+    np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_action_history.npy"), action_arr)
     print("Average reward: ", np.mean(render_env.all_episode_rewards))
     print("Average success: ", np.mean(render_env.all_episode_success))
     render_env.close()
-

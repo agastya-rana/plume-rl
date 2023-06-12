@@ -58,6 +58,9 @@ agent_dict = {
 	"MIN_TURN_DUR_S": 0.18,
 	"EXCESS_TURN_DUR_S": 0.18,
     "GOAL_RADIUS_MM": 10, #success radius in mm
+    "INT_TIMESTEP": True, ## whether to use larger timesteps
+    "INTEGRATED_DT": 1/10, ## timestep for integration
+    "FEATURES_FILTER_SIZE": 5 ## size of filter for temporal filtering of features in units of original dt
 }
 
 reward_dict = {
@@ -90,7 +93,6 @@ training_dict = {
     "MODEL_NAME": "rnn_shaping", ## name of model to save
     "TB_LOG": "./logs/rnn_shaping/", ## directory to save tensorboard logs
     "TEST_EPISODES": 1000, ## number of episodes to test the model
-    "N_HIDDEN_UNITS": 3, ## number of hidden units in MLP layers
 }
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}
