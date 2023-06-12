@@ -105,11 +105,11 @@ config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "o
 seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
 
-environment = FlyNavigator(rng = rng, config = config_dict)
+env = FlyNavigator(rng = rng, config = config_dict)
 
-N_EPISODES = 10
+N_EPISODES = 1
 
-model_path = os.path.join('..','trained_models', 'dqn_no_temp_first_round_redo_060223', '7after_8000000.zip')
+model_path = os.path.join('..','trained_models', 'debugging_new_training_scheme_061223', '9_after_13511.zip')
 
 model = DQN.load(model_path, env = env)
 
