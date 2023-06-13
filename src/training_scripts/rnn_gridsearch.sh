@@ -6,7 +6,8 @@
 #SBATCH --open-mode=append
 #SBATCH --time=1-00:00:00
 #SBATCH --mail-type=ALL
+#SBATCH --array=0-100
 
 eval "$(conda shell.bash hook)"
 conda activate EmonetLab
-python ../src/training_scripts/train_rnn_gridsearch.py
+python ../src/training_scripts/train_rnn_gridsearch.py $SLURM_ARRAY_TASK_ID

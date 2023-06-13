@@ -86,7 +86,7 @@ training_dict = {
     "MODEL_NAME": "dqn_hist_filter", ## name of model to save
     "TB_LOG": "./logs/dqn_hist/", ## directory to save tensorboard logs
     "TEST_EPISODES": 1000, ## number of episodes to test the model
-    "N_HIDDEN_UNITS": 3, ## number of hidden units in MLP layers
+    "N_HIDDEN_UNITS": 16, ## number of hidden units in MLP layers
     "N_HIDDEN_LAYERS": 1, ## number of hidden layers in MLP
     "FEATURES_EXTRACTOR_CLASS": FilterExtractor,
     "N_HEADS": 5, ## 5 heads

@@ -44,7 +44,7 @@ state_dict = {
 
 output_dict = {
     'RECORD_SUCCESS': False, ## whether to record rewards and number of successful episodes
-    'SAVE_DIRECTORY': os.path.join('..', 'trained_models', 'rnn'), ## directory to save model
+    'SAVE_DIRECTORY': os.path.join('..', 'trained_models', 'dqn'), ## directory to save model
     'RECORD_STATE_ACTION': 500, ## number of episodes to record state and action at each step in testing
     "RENDER_VIDEO": False, ## whether to render the video of the plume
 }
@@ -76,18 +76,19 @@ reward_dict = {
 }
 
 training_dict = {
-    "N_EPISODES": 5000,
+    "N_EPISODES": 1,
     "MAX_EPISODE_LENGTH": 5000,
-    "MAX_ALPHA": 0.1,
+    "MAX_ALPHA": 0.01,
     "MIN_ALPHA": 0.001,
-    "GAMMA": 0.99,
-    "MIN_EPSILON": 0.01,
-    "LEARNING_END_FRACTION": 2/3,
-    "MODEL_NAME": "dqn_hist", ## name of model to save
+    "GAMMA": 0.9999,
+    "MIN_EPSILON": 0.05,
+    "LEARNING_END_FRACTION": 1/12,
+    "MODEL_NAME": "dqn_hist_larger", ## name of model to save
     "TB_LOG": "./logs/dqn_hist/", ## directory to save tensorboard logs
     "TEST_EPISODES": 1000, ## number of episodes to test the model
-    "N_HIDDEN_UNITS": 3, ## number of hidden units in MLP layers
-    "N_HIDDEN_LAYERS": 1, ## number of hidden layers in MLP
+    "N_HIDDEN_UNITS": 32, ## number of hidden units in MLP layers
+    "N_HIDDEN_LAYERS": 3, ## number of hidden layers in MLP
+    "FEATURES_EXTRACTOR_CLASS": None, ## class of features extractor
 }
 
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}

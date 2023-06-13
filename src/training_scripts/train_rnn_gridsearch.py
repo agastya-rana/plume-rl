@@ -14,6 +14,7 @@ from optuna.pruners import MedianPruner
 from optuna.storages import JournalStorage, JournalFileStorage
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
+from stable_baselines3.common.evaluation import evaluate_policy
 import gym
 import pickle
 import logging
@@ -144,7 +145,13 @@ def objective(trial):
     policy_kwargs={"lstm_hidden_size": training_dict['LSTM_HIDDEN_SIZE'], "net_arch": training_dict['ACTOR_CRITIC_LAYERS']},
     gamma=training_dict['GAMMA'], gae_lambda=training_dict['GAE_LAMBDA'], clip_range=training_dict['CLIP_RANGE'], vf_coef=training_dict['VF_COEF'], ent_coef=training_dict['ENT_COEF'])
     model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'])
-    mean_reward = evaluate(model, env, num_episodes=training_dict['TEST_EPISODES'])
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=training_dict["TEST_EPISODES"], warn=False)
+    ## Free up memory
+    for environment in env.envs:
+        environment.odor_plume = None
+        environment.close()
+        del environment
+    del env
     return mean_reward
 
 def evaluate(model, env, num_episodes=5):
@@ -171,8 +178,8 @@ def evaluate(model, env, num_episodes=5):
 
 if __name__ == "__main__":
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-    study_name = "reward-shaping"  # Unique identifier of the study.
-    storage = JournalStorage(JournalFileStorage("optuna-journal.log"))
+    study_name = f"reward-shaping_{sys.argv[1]}"  # Unique identifier of the study.
+    storage = JournalStorage(JournalFileStorage(f"optuna-journal_{sys.argv[1]}.log"))
     # Set n_jobs to -1 to use all cores
     study = optuna.create_study(direction='maximize', study_name=study_name, storage=storage, load_if_exists=True)
     study.optimize(objective, n_trials=500, n_jobs=1)

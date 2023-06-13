@@ -80,7 +80,7 @@ class HistoryNavigator(FlyNavigator):
 	def __init__(self, rng, config):
 		super().__init__(rng, config)
 		self.history_len = config["state"]["HIST_LEN"] ## note that this doesn't include the current observation
-		self.history = np.zeros((self.num_odor_obs, self.history_len))
+		self.history = np.zeros((self.history_len, self.num_odor_obs))
 		## all_obs initialization depends on whether we use sin cos or not
 		self.store_angles = False ## If true, store the fly angle history too TODO: implement this
 		## In the following, I am leaving self.observables (names of observed features) unchanged; hopefully this doesn't mess up any other functions that call this
@@ -103,7 +103,7 @@ class HistoryNavigator(FlyNavigator):
 		## Step the environment with the given action
 		## Add the current observation to the history, and remove the oldest observation
 		self.history = np.roll(self.history, 1, axis=0)
-		self.history[:,0] = self.all_obs[:self.num_odor_obs]
+		self.history[0, :] = self.all_obs[:self.num_odor_obs]
 		return super().step(action)
 	
 	def _update_state(self):
@@ -111,4 +111,4 @@ class HistoryNavigator(FlyNavigator):
 			pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame) ## Update the odor features at initalized fly location
 		self.all_obs[:self.num_odor_obs] = odor_obs
 		self.all_obs[self.num_odor_obs:-self.theta_dim] = self.history.flatten()
-		self._add_theta_observation() ## remember, this adds theta to the last one or two frames of observation
+		self._add_theta_observation() ## remember, this amends theta at the last one or two frames of observation
