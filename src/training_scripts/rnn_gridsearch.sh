@@ -6,7 +6,7 @@
 #SBATCH --open-mode=append
 #SBATCH --time=1-00:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --array=0-100
+#SBATCH --array=0-30
 
 eval "$(conda shell.bash hook)"
 conda activate EmonetLab

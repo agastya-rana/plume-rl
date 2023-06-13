@@ -90,7 +90,7 @@ def objective(trial):
     ## Define the model to be run here
     learning_rate = trial.suggest_loguniform('learning_rate', 1e-4, 1e-2)
     training_dict = {
-        "N_EPISODES": 5000,
+        "N_EPISODES": 2,
         "MAX_EPISODE_LENGTH": 5000,
         "MAX_ALPHA": learning_rate,
         "MIN_ALPHA": learning_rate,
@@ -99,7 +99,7 @@ def objective(trial):
         "LEARNING_END_FRACTION": 1/12,
         "MODEL_NAME": "dqn_hist_larger", ## name of model to save
         "TB_LOG": "./logs/dqn_hist/", ## directory to save tensorboard logs
-        "TEST_EPISODES": 1000, ## number of episodes to test the model
+        "TEST_EPISODES": 2, ## number of episodes to test the model
         "N_HIDDEN_UNITS": 32, ## number of hidden units in MLP layers
         "N_HIDDEN_LAYERS": 3, ## number of hidden layers in MLP
         "FEATURES_EXTRACTOR_CLASS": None, ## class of features extractor

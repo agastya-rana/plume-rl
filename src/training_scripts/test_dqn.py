@@ -50,8 +50,8 @@ output_dict = {
 }
 
 agent_dict = {
-    "ANTENNA_LENGTH_MM": 2,
-	"ANTENNA_WIDTH_MM": 1,
+    "ANTENNA_LENGTH_MM": 1,
+	"ANTENNA_WIDTH_MM": 0.5,
     "WALK_SPEED_MM_PER_S": 10,
 	"DELTA_T_S": 1/60,
     "TURN_ANG_SPEED_RAD_PER_S": 100*np.pi/180,
@@ -69,7 +69,7 @@ reward_dict = {
 	"WALL_MIN_X_MM": -10,
 	"WALL_MIN_Y_MM": 0,
 	"WALL_MAX_Y_MM": 180,
-	"RADIAL_REWARD": 5,
+	"RADIAL_REWARD": 0.1,
     "CONC_UPWIND_REWARD": 1/60,
     'CONC_REWARD': 1/60,
     "MOTION_REWARD": 0,
@@ -79,11 +79,11 @@ training_dict = {
     "N_EPISODES": 5000,
     "MAX_EPISODE_LENGTH": 5000,
     "MAX_ALPHA": 0.01,
-    "MIN_ALPHA": 0.0001,
+    "MIN_ALPHA": 0.001,
     "GAMMA": 0.9999,
     "MIN_EPSILON": 0.05,
-    "LEARNING_END_FRACTION": 1/3,
-    "MODEL_NAME": "dqn_hist_hack", ## name of model to save
+    "LEARNING_END_FRACTION": 1/12,
+    "MODEL_NAME": "dqn_hist_larger", ## name of model to save
     "TB_LOG": "./logs/dqn_hist/", ## directory to save tensorboard logs
     "TEST_EPISODES": 1000, ## number of episodes to test the model
     "N_HIDDEN_UNITS": 32, ## number of hidden units in MLP layers
@@ -97,6 +97,5 @@ if __name__ == "__main__":
     ## Train the model
     if len(sys.argv) > 1:
         config_dict["training"]["MODEL_NAME"] += '_' + sys.argv[1]
-    model = train_model(config_dict)
     ## Test the model
     test_model(config_dict)

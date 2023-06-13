@@ -79,6 +79,8 @@ def test_model(config):
         if done:
             obs = render_env.reset()
             episode_no += 1
+            if episode_no % 100 == 0:
+                print("Episode number: ", episode_no, flush=True)
     np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_reward_history.npy"), np.array(render_env.all_episode_rewards))
     np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_success_history.npy"), np.array(render_env.all_episode_success))
     ## Save state and action arrays

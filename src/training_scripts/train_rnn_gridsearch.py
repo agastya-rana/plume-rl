@@ -56,7 +56,7 @@ state_dict = {
 output_dict = {
     "RENDER_VIDEO": 'rnn.mp4', ## name of video file to render to
     'RECORD_SUCCESS': False, ## whether to record rewards and number of successful episodes
-    'SAVE_DIRECTORY': os.path.join('..', 'trained_models') ## directory to save model
+    'SAVE_DIRECTORY': os.path.join('..', 'trained_models', 'rnn') ## directory to save model
 }
 
 agent_dict = {
@@ -117,7 +117,7 @@ def objective(trial):
     ## Add tuned variables here
     conc_upwind_reward = trial.suggest_loguniform('conc_upwind_reward', 1e-4, 1e-1)
     conc_reward = trial.suggest_loguniform('conc_reward', 1e-4, 1e-1)
-    radial_reward = trial.suggest_loguniform('radial_reward', 5e-4, 5e-1)
+    radial_reward = trial.suggest_loguniform('radial_reward', 5e-4, 5)
     wall_penalty = trial.suggest_loguniform('wall_penalty', 5e2, 5e4)
     source_reward = trial.suggest_loguniform('source_reward', 1e3, 1e5)
     learning_rate = trial.suggest_loguniform('learning_rate', 1e-4, 1e-2)
@@ -154,32 +154,10 @@ def objective(trial):
     del env
     return mean_reward
 
-def evaluate(model, env, num_episodes=5):
-    all_episode_rewards = []
-    env.reset()
-    # cell and hidden state of the LSTM
-    lstm_states = None
-    # Episode start signal
-    episode_start = True
-    for i in range(num_episodes):
-        obs = env.reset()
-        done = False
-        episode_rewards = 0.0
-        episode_start = True
-        while not done:
-            action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
-            obs, reward, done, _ = env.step(action)
-            episode_rewards += reward
-            episode_start = False
-        all_episode_rewards.append(episode_rewards)
-    mean_episode_reward = np.mean(all_episode_rewards)
-    return mean_episode_reward
-
-
 if __name__ == "__main__":
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-    study_name = f"reward-shaping_{sys.argv[1]}"  # Unique identifier of the study.
-    storage = JournalStorage(JournalFileStorage(f"optuna-journal_{sys.argv[1]}.log"))
+    study_name = f"rnn-reward-shaping_{sys.argv[1]}"  # Unique identifier of the study.
+    storage = JournalStorage(JournalFileStorage(f"rnn-reward-journal_{sys.argv[1]}.log"))
     # Set n_jobs to -1 to use all cores
     study = optuna.create_study(direction='maximize', study_name=study_name, storage=storage, load_if_exists=True)
     study.optimize(objective, n_trials=500, n_jobs=1)
