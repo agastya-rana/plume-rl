@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/gpfs/gibbs/project/emonet/vrj9/code/plume_rl/movie_conversion/run_big_movie_conversion.py", line 26, in <module>
+    frame = frame_1.astype(float) - bck_frame.astype(float)
+ValueError: operands could not be broadcast together with shapes (1208,2048) (1208,2048,3) 

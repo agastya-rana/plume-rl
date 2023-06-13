@@ -11,13 +11,14 @@ mask = np.load('longer_wider_intermittent_mask.npy')
 
 video_capture.set(cv2.CAP_PROP_POS_FRAMES, 60)
 _, bck_frame = video_capture.read()
+bck_frame = bck_frame[:,:,2]
 
 output_file = 'longer_wider_intermittent_full_subtraction.mp4'
 frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
 
 writer = imageio.get_writer(output_file, fps=frame_rate)
 
-for i in range(0,3800):
+for i in range(500,590):
 
 	video_capture.set(cv2.CAP_PROP_POS_FRAMES, i)
 	_, frame_1 = video_capture.read()
