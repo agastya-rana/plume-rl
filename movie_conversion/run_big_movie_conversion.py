@@ -28,7 +28,7 @@ m, b = np.polyfit(good_frames, good_ints, 1)
 
 init_val = m*150 + b
 
-for i in range(150,3800):
+for i in range(150,3384):
 
 	scale = init_val/(m*i + b)
 
@@ -38,7 +38,7 @@ for i in range(150,3800):
 
 	frame_1 = frame_1.astype(float)
 	frame = scale*frame_1
-	frame = frame.astype(np.uint8)
+	frame = frame.astype(np.double)
 	writer.append_data(frame)
 
 
