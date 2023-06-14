@@ -14,17 +14,17 @@ from stable_baselines3.common.vec_env import VecEnv
 import stable_baselines3.common.utils
 from stable_baselines3.common.callbacks import BaseCallback
 
-plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
+plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'longer_wider_intermittent_final.mp4')
 
 plume_dict = {
-	"MM_PER_PX": 0.2,
+	"MM_PER_PX": 0.154,
 	"MAX_CONCENTRATION": 255,
 	"PLUME_TYPE": 'movie',
 	"MOVIE_PATH": plume_movie_path,
-	"MIN_FRAME": 500,
-	"STOP_FRAME": 5000,
-	"RESET_FRAME_RANGE": np.array([501, 800]),
-	"SOURCE_LOCATION_MM": np.array([30,90]),
+	"MIN_FRAME": 0,
+	"STOP_FRAME": 3233,
+	"RESET_FRAME_RANGE": np.array([0, 300]),
+	"SOURCE_LOCATION_MM": np.array([14,93.6]),
 	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
 	"INITIAL_MAX_RESET_X_MM": 300,
 	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
@@ -34,7 +34,7 @@ plume_dict = {
 	"RESET_X_SHIFT_MM": 5,
 	"INIT_THETA_MIN": 0,
 	"INIT_THETA_MAX": 2*np.pi,
-	"PX_THRESHOLD": 100,
+	"PX_THRESHOLD": 0,
 }
 
 state_dict = {
@@ -57,10 +57,10 @@ output_dict = {
 }
 
 agent_dict = {
-	"ANTENNA_LENGTH_MM": 0.41,
-	"ANTENNA_WIDTH_MM": 0.21,
+	"ANTENNA_LENGTH_MM": 2,
+	"ANTENNA_WIDTH_MM": 1,
 	"WALK_SPEED_MM_PER_S": 10,
-	"DELTA_T_S": 1/60,
+	"DELTA_T_S": 1/29.95,
 	"TURN_ANG_SPEED_RAD_PER_S": 100*np.pi/180,
 	"MIN_TURN_DUR_S": 0.18,
 	"EXCESS_TURN_DUR_S": 0.18,
@@ -68,7 +68,7 @@ agent_dict = {
 }
 
 reward_dict = {
-	"SOURCE_REWARD": 500,
+	"SOURCE_REWARD": 50000,
 	"PER_STEP_REWARD": -1/60,
 	"IMPOSE_WALLS": True,
 	"WALL_PENALTY": 0,
@@ -87,9 +87,9 @@ reward_dict = {
 
 training_dict = {
 
-"MAX_ALPHA": 0.1,
-"MIN_ALPHA": 0.001,
-"GAMMA": 0.99,
+"MAX_ALPHA": 0.01,
+"MIN_ALPHA": 0.0001,
+"GAMMA": 0.9999,
 "MIN_EPSILON":0.01,
 "LEARNING_END_FRACTION": 1/3,
 "LOGDIR": 'logs',
