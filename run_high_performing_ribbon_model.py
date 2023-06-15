@@ -12,8 +12,6 @@ import gym
 from stable_baselines3 import DQN
 from stable_baselines3.common.vec_env import VecEnv
 import stable_baselines3.common.utils
-from stable_baselines3.common.callbacks import BaseCallback
-
 
 plume_dict = {
 	"MM_PER_PX": 0.2,
@@ -98,49 +96,56 @@ training_dict = {
 
 }
 
+
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}
 
+N_EPISODES = 100
 
 seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
+env = FlyNavigator(rng = rng, config = config_dict)
+model_path = os.path.join('..','trained_models', 'dqn_ribbon_061523', '.zip')
 
-environment = FlyNavigator(rng = rng, config = config_dict)
+model = DQN.load(model_path, env = env)
+success_arr = np.zeros(N_EPISODES)
 
-models_dir = 'models/'
+num_cols = 7
 
-learning_rate = stable_baselines3.common.utils.get_linear_fn(start = training_dict['MAX_ALPHA'], 
- end = training_dict['MIN_ALPHA'], end_fraction = training_dict['LEARNING_END_FRACTION'])
+data_arr = np.zeros((4500,num_cols,N_EPISODES))
 
-model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=None, gamma = training_dict['GAMMA'], 
-	exploration_final_eps = training_dict['MIN_EPSILON'], seed = seed, learning_rate=learning_rate)
+for episode in range(0, N_EPISODES):
 
+	obs = env.reset()
+	done = False
 
-class CustomCallback(BaseCallback):
+	count = 0
 
-	def __init__(self, env, save_freq, save_dir, seed = seed, verbose=True):
+	while not done:
 
-		super(CustomCallback, self).__init__(verbose)
-		self.save_freq = save_freq
-		self.save_dir = save_dir
-		self.seed = seed
-		self.env = env
+		action = model.predict(obs)[0]
 
-	def _on_step(self) -> bool:
-		if self.n_calls % self.save_freq == 0:
-			n_eps = len(self.env.all_episode_rewards)
-			print('n eps = ', n_eps)
-			save_string = str(self.seed)+"_after_"+str(n_eps)
-			self.model.save(self.save_dir+save_string)
-			np.save(self.save_dir+str(self.seed)+"_reward_history.npy", np.array(self.env.all_episode_rewards))
-			np.save(self.save_dir+str(self.seed)+"_success_history.npy", np.array(self.env.all_episode_success))
+		new_row = np.zeros(num_cols)
+		new_row[0:3] = obs[0:3]
+		new_row[3] = env.fly_spatial_parameters.theta
+		new_row[4] = action
+		new_row[5:] = env.fly_spatial_parameters.position
 
+		data_arr[count,:,episode] = new_row
 
-callback = CustomCallback(env = environment, save_freq = 500000, save_dir = 'models/')
+		obs, reward, done, info = env.step(action)
 
-model.learn(total_timesteps=25000000, reset_num_timesteps=False, callback=callback)
+		count+=1
 
+	if env.reached_source:
 
+		success_arr[episode] = 1
 
+	if count<4500:
+
+		data_arr[count:,:,episode] = np.nan
+
+np.save(str(seed)+"_data_arr.npy", data_arr)
+np.save(str(seed)+"_success_arr.npy", success_arr)
 
 
 
