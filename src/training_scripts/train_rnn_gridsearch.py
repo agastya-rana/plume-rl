@@ -146,21 +146,16 @@ def objective(trial):
     gamma=training_dict['GAMMA'], gae_lambda=training_dict['GAE_LAMBDA'], clip_range=training_dict['CLIP_RANGE'], vf_coef=training_dict['VF_COEF'], ent_coef=training_dict['ENT_COEF'])
     model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'])
     mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=training_dict["TEST_EPISODES"], warn=False)
-    ## Free up memory
-    for environment in env.envs:
-        environment.odor_plume = None
-        environment.close()
-        del environment
     del env
     return mean_reward
 
 if __name__ == "__main__":
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-    study_name = f"rnn-reward-shaping_{sys.argv[1]}"  # Unique identifier of the study.
-    storage = JournalStorage(JournalFileStorage(f"rnn-reward-journal_{sys.argv[1]}.log"))
+    study_name = f"rnn_reward_shaping_{sys.argv[1]}"  # Unique identifier of the study.
+    storage = JournalStorage(JournalFileStorage(f"rnn_reward_journal_{sys.argv[1]}.log"))
     # Set n_jobs to -1 to use all cores
     study = optuna.create_study(direction='maximize', study_name=study_name, storage=storage, load_if_exists=True)
-    study.optimize(objective, n_trials=500, n_jobs=1)
+    study.optimize(objective, n_trials=100, n_jobs=1)
     best_params = study.best_params
     best_value = study.best_value
     print(f"Best value: {best_value} \n Best params: {best_params}")

@@ -69,21 +69,21 @@ reward_dict = {
 	"WALL_MIN_X_MM": -10,
 	"WALL_MIN_Y_MM": 0,
 	"WALL_MAX_Y_MM": 180,
-	"RADIAL_REWARD": 5,
+	"RADIAL_REWARD": 3,
     "CONC_UPWIND_REWARD": 1/60,
     'CONC_REWARD': 1/60,
     "MOTION_REWARD": 0,
 }
 
 training_dict = {
-    "N_EPISODES": 5000,
+    "N_EPISODES": 12000,
     "MAX_EPISODE_LENGTH": 5000,
-    "MAX_ALPHA": 0.01,
+    "MAX_ALPHA": 0.001,
     "MIN_ALPHA": 0.0001,
     "GAMMA": 0.9999,
     "MIN_EPSILON": 0.05,
-    "LEARNING_END_FRACTION": 1/3,
-    "MODEL_NAME": "dqn_hist_hack", ## name of model to save
+    "LEARNING_END_FRACTION": 1/5,
+    "MODEL_NAME": "dqn_hist_best", ## name of model to save
     "TB_LOG": "./logs/dqn_hist/", ## directory to save tensorboard logs
     "TEST_EPISODES": 1000, ## number of episodes to test the model
     "N_HIDDEN_UNITS": 32, ## number of hidden units in MLP layers

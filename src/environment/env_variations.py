@@ -98,7 +98,7 @@ class HistoryNavigator(FlyNavigator):
 			self.observation_space = Box(low=self.observable_bounds[:, 0], high=self.observable_bounds[:, 1])
 		## We use convention where most recent observation is first in the array (see _update_state)
 		self.all_obs = np.zeros(self.obs_dim).astype(int) if self.discrete_obs else np.zeros(self.obs_dim).astype('float32') ## Initialize all observables to 0
-	
+
 	def step(self, action):
 		## Step the environment with the given action
 		## Add the current observation to the history, and remove the oldest observation
@@ -112,3 +112,39 @@ class HistoryNavigator(FlyNavigator):
 		self.all_obs[:self.num_odor_obs] = odor_obs
 		self.all_obs[self.num_odor_obs:-self.theta_dim] = self.history.flatten()
 		self._add_theta_observation() ## remember, this amends theta at the last one or two frames of observation
+
+class HistoryTimestepNavigator(FlyNavigator):
+	## NOTE: THIS IS NOT COMPLETE.
+	def __init__(self, rng, config):
+		super().__init__(rng, config)
+		self.history_len = config["state"]["HIST_LEN"] ## note that this doesn't include the current observation
+		self.history = np.zeros((self.history_len, self.num_odor_obs))
+		## all_obs initialization depends on whether we use sin cos or not
+		self.store_angles = False ## If true, store the fly angle history too TODO: implement this
+		## In the following, I am leaving self.observables (names of observed features) unchanged; hopefully this doesn't mess up any other functions that call this
+		self.theta_dim = 2 if self.use_cos_and_sin else 1
+		self.obs_dim = self.num_odor_obs*(self.history_len+1) + self.theta_dim ## 2 for cos and sin theta, 1 for theta
+		if self.discrete_obs:
+			all_obs_inds = copy.deepcopy(self.odor_features.discretization_index)*(self.history_len+1)
+			all_obs_inds.append(self.theta_discretization) #note that for discretized states it doesn't make sense to split into sin and cos so this assumes only 1 theta observable
+			self.observation_space = MultiDiscrete(all_obs_inds)
+		else:
+			if self.use_cos_and_sin:
+				self.observable_bounds = np.vstack((self.odor_features.feat_bounds,)*(self.history_len+1) +  (np.array([[-1, 1], [-1, 1]]),)) ## bounds for cos and sin theta
+			else:
+				self.observable_bounds = np.vstack((self.odor_features.feat_bounds,)*(self.history_len+1) +  (np.array([[0, 2*np.pi]]),)) ## bounds for theta
+			self.observation_space = Box(low=self.observable_bounds[:, 0], high=self.observable_bounds[:, 1])
+		## We use convention where most recent observation is first in the array (see _update_state)
+		self.all_obs = np.zeros(self.obs_dim).astype(int) if self.discrete_obs else np.zeros(self.obs_dim).astype('float32') ## Initialize all observables to 0
+		self.integrated_dt = config["agent"]["INTEGRATED_DT"]
+		self.features_filter_size = config["agent"]["FEATURES_FILTER_SIZE"]
+		self.advance_timesteps = int(self.integrated_dt/self.dt) ## This should be an exact multiple
+		assert self.advance_timesteps*self.dt == self.integrated_dt
+		self.filtered_obs = np.zeros((self.num_odor_obs,))
+	
+	
+	def step(self, action):
+		## Step the environment with the given action
+		## Add the current observation to the history, and remove the oldest observation
+		self.history = np.roll(self.history, 1)
+		self.history[0, :] = self.all_obs[:self.num_odor_obs]

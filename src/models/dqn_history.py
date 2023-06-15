@@ -66,13 +66,13 @@ def test_model(config):
     episode_no = 0
     num_record = config["output"]["RECORD_STATE_ACTION"]
     state_arr = np.empty((num_record, config["plume"]["STOP_FRAME"], render_env.obs_dim))
-    action_arr = np.empty((num_record, config["plume"]["STOP_FRAME"], 4))
+    action_arr = np.empty((num_record, config["plume"]["STOP_FRAME"]))
     while episode_no < config["training"]['TEST_EPISODES']:
         action = model.predict(obs, deterministic=True)[0]
         if episode_no < num_record:
             ## Store state and action
             state_arr[episode_no, render_env.odor_plume.frame_number, :] = obs
-            action_arr[episode_no, render_env.odor_plume.frame_number, :] = action
+            action_arr[episode_no, render_env.odor_plume.frame_number] = action
         obs, _, done, _ = render_env.step(action)
         if episode_no < 10:
             render_env.render()
