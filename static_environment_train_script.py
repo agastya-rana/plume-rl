@@ -33,7 +33,7 @@ plume_dict = {
 	"RESET_X_SHIFT_MM": 5,
 	"INIT_THETA_MIN": 0,
 	"INIT_THETA_MAX": 2*np.pi,
-	"PX_THRESHOLD": 2.55,
+	"PX_THRESHOLD": 1,
 }
 
 state_dict = {
@@ -41,7 +41,7 @@ state_dict = {
 	"DISCRETE_OBSERVABLES": False,
 	"FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
 	"NORMALIZE_ODOR_FEATURES": True,
-	"CONCENTRATION_BASE_THRESHOLD": 2.55, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.
+	"CONCENTRATION_BASE_THRESHOLD": 1, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.
 	"USE_BASE_THRESHOLD_FOR_MEAN": False,  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
 	"THETA_DISCRETIZATION": 8, ## number of bins of discretizing theta
@@ -111,7 +111,9 @@ models_dir = 'models/'
 learning_rate = stable_baselines3.common.utils.get_linear_fn(start = training_dict['MAX_ALPHA'], 
  end = training_dict['MIN_ALPHA'], end_fraction = training_dict['LEARNING_END_FRACTION'])
 
-model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=None, gamma = training_dict['GAMMA'], 
+policy_kwargs = {'net_arch':[4,4]}
+
+model = DQN("MlpPolicy", policy_kwargs = policy_kwargs, env =  environment, verbose = 1, tensorboard_log=None, gamma = training_dict['GAMMA'], 
 	exploration_final_eps = training_dict['MIN_EPSILON'], seed = seed, learning_rate=learning_rate)
 
 
