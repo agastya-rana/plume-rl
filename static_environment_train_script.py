@@ -25,7 +25,7 @@ plume_dict = {
 	"STOP_FRAME": 5000, #note that for a static environment, this is really setting a time step limit
 	"SOURCE_LOCATION_MM": np.array([0,90]),
 	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
-	"INITIAL_MAX_RESET_X_MM": 45,
+	"INITIAL_MAX_RESET_X_MM": 300,
 	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
 	"MIN_RESET_Y_MM": 0,
 	"MAX_RESET_Y_MM": 180,
@@ -105,6 +105,8 @@ seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
 
 environment = FlyNavigator(rng = rng, config = config_dict)
+
+environment.observation_space = Box(low=np.array([0,-0.2,-1,-1,-1]), high = np.array([1,0.2,1,1,1]))
 
 models_dir = 'models/'
 
