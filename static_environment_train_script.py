@@ -23,7 +23,7 @@ plume_dict = {
 	"FRAME_X_MM": 330,
 	"FRAME_Y_MM": 180,
 	"STOP_FRAME": 5000, #note that for a static environment, this is really setting a time step limit
-	"SOURCE_LOCATION_MM": np.array([30,90]),
+	"SOURCE_LOCATION_MM": np.array([0,90]),
 	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
 	"INITIAL_MAX_RESET_X_MM": 45,
 	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
