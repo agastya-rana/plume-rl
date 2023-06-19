@@ -323,7 +323,7 @@ class FlyNavigator(Env):
 
 			# Annotate plot with current odor detections
 			odor_features = self.odor_features.update(self.fly_spatial_parameters.theta, self.fly_spatial_parameters.position, self.odor_plume.frame)
-			textstr = f"Concentration: {odor_features[0]:.2f}\nGradient: {odor_features[1]:.2f}\nVelocity: {odor_features[2]:.2f}"
+			textstr = f"Concentration: {odor_features[0]:.2f}\nGradient: {odor_features[1]:.2f}"
 			props = dict(boxstyle='round', facecolor='white', alpha=0.5)
 			self.ax.text(0.05, 0.95, textstr, transform=self.ax.transAxes, fontsize=14,
 				verticalalignment='top', bbox=props)
