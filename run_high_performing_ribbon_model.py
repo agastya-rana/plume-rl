@@ -21,9 +21,9 @@ plume_dict = {
 	"FRAME_X_MM": 330,
 	"FRAME_Y_MM": 180,
 	"STOP_FRAME": 5000, #note that for a static environment, this is really setting a time step limit
-	"SOURCE_LOCATION_MM": np.array([30,90]),
+	"SOURCE_LOCATION_MM": np.array([0,90]),
 	"MIN_RESET_X_MM": 40, # Initialization condition-minimum agent x in mm
-	"INITIAL_MAX_RESET_X_MM": 45,
+	"INITIAL_MAX_RESET_X_MM": 300,
 	"MAX_RESET_X_MM": 300, # Initialization condition-maximum agent x in mm
 	"MIN_RESET_Y_MM": 0,
 	"MAX_RESET_Y_MM": 180,
@@ -31,15 +31,15 @@ plume_dict = {
 	"RESET_X_SHIFT_MM": 5,
 	"INIT_THETA_MIN": 0,
 	"INIT_THETA_MAX": 2*np.pi,
-	"PX_THRESHOLD": 2.55,
+	"PX_THRESHOLD": 1,
 }
 
 state_dict = {
 	"USE_COSINE_AND_SIN_THETA": True,
 	"DISCRETE_OBSERVABLES": False,
-	"FEATURES": ['conc', 'grad', 'hrc'], ## see OdorFeatures class for options,
+	"FEATURES": ['conc', 'grad'], ## see OdorFeatures class for options,
 	"NORMALIZE_ODOR_FEATURES": True,
-	"CONCENTRATION_BASE_THRESHOLD": 2.55, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.
+	"CONCENTRATION_BASE_THRESHOLD": 1, #this is the value that's good for movies. Do not change this to account for normalization-this happens internally.
 	"USE_BASE_THRESHOLD_FOR_MEAN": False,  
 	"CONCENTRATION_THRESHOLD_STYLE": "fixed",
 	"THETA_DISCRETIZATION": 8, ## number of bins of discretizing theta
@@ -104,14 +104,17 @@ N_EPISODES = 100
 seed = int(sys.argv[1])
 rng = np.random.default_rng(seed)
 env = FlyNavigator(rng = rng, config = config_dict)
-model_path = os.path.join('..','trained_models', 'dqn_ribbon_061523', '.zip')
+
+env.observation_space = Box(low=np.array([0,-0.2,-1,-1]), high = np.array([1,0.2,1,1]))
+
+model_path = os.path.join('..','trained_models', 'ribbon_061723', 'conc_grad_big_network', '1_after_21051.zip')
 
 model = DQN.load(model_path, env = env)
 success_arr = np.zeros(N_EPISODES)
 
 num_cols = 7
 
-data_arr = np.zeros((4500,num_cols,N_EPISODES))
+data_arr = np.zeros((5000,num_cols,N_EPISODES))
 
 for episode in range(0, N_EPISODES):
 
@@ -140,7 +143,7 @@ for episode in range(0, N_EPISODES):
 
 		success_arr[episode] = 1
 
-	if count<4500:
+	if count<5000:
 
 		data_arr[count:,:,episode] = np.nan
 
