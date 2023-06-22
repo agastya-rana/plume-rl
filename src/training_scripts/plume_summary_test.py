@@ -1,10 +1,10 @@
 from src.models.plume_summary import PlumeSummary
 import os
 import numpy as np
-plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
+plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'longer_wider_intermittent_final.mp4')
 
 plume_dict = {
-    "MM_PER_PX": 0.2,
+    "MM_PER_PX": 0.154,
     "MAX_CONCENTRATION": 255,
     "PX_THRESHOLD": 100,
     "MOVIE_PATH": plume_movie_path,
@@ -65,10 +65,11 @@ reward_dict = {
     "CONC_UPWIND_REWARD": 1/60,
     'CONC_REWARD': 1/60,
 }
+
 training_dict = {}
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}
 
 rbins = [20*i for i in range(8)]
-thetabins = [-np.pi/2, -np.pi/4, 0, np.pi/4, np.pi/2]
-summary = PlumeSummary(config_dict, rbins, thetabins, n_points=500, samples_per_point=500)
+thetabins = np.linspace(-np.pi/2, np.pi/2, 10)
+summary = PlumeSummary(config_dict, rbins, thetabins, n_points=1000, samples_per_point=500)
 summary.plot()

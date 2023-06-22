@@ -11,7 +11,7 @@ from src.environment.odor_senses import *
 
 class PlumeSummary(object):
 
-    def __init__(self, config, ax1_bins, ax2_bins, n_stat_bins=10, stat_bin_type='linear', axes='polar', n_points=1000, samples_per_point = 5, feats=['conc', 'grad', 'hrc']):
+    def __init__(self, config, ax1_bins, ax2_bins, n_stat_bins=10, stat_bin_type='linear', axes='polar', n_points=1000, samples_per_point = 5, feats=['conc', 'grad', 'hrc'], exclude_zero=False):
         self.plume = OdorPlumeFromMovie(config, load=False)
         self.feats = feats
         self.n_stats = len(feats)
@@ -19,6 +19,7 @@ class PlumeSummary(object):
         self.ax1_bins = np.array(ax1_bins) ## Could be r or x
         self.ax2_bins = np.array(ax2_bins) ## Could be theta or y
         self.n_points = n_points
+        self.exclude_zero = exclude_zero
         self.samples_per_point = samples_per_point
         self.bin_type = axes
         self.n_stat_bins = n_stat_bins
@@ -130,12 +131,21 @@ class PlumeSummary(object):
                 points = self._generate_points_in_bin(i, j)
                 ## Normalize the counts by the number of points
                 stats = self._compute_stats_at_location(points) ## stats has shape (n_points*samples_per_point, n_stats)
-                print(stats)
-                self.counts[i, j], self.marginals[i, j] = self._bin_stats(stats)
+                ## Exclude zeroes if chosen to do so
+                if self.exclude_zero:
+                    ## Set the zero values to NaN
+                    stats[stats == 0] = np.nan
+                    for k in range(self.n_stats):
+                        ## Remove the NaNs
+                        stat = stats[:, k]
+                        stat = stat[~np.isnan(stat)]
+                        self.marginals[i, j, k, :] = np.histogram(stat, bins=self.stat_bins[k], density=False)[0]
+                else:
+                    self.counts[i, j], self.marginals[i, j] = self._bin_stats(stats)
+
     
     def _generate_points_in_bin(self, i, j):
         ## Generate a set of points in the given bin; np array of dim (n_points, 2)
-        ## TODO: check that this works
         np.random.seed(0)
         ax1_samples = np.random.uniform(low=self.ax1_bins[i], high=self.ax1_bins[i+1], size=(self.n_points, 1))
         ax2_samples = np.random.uniform(low=self.ax2_bins[j], high=self.ax2_bins[j+1], size=(self.n_points, 1))

@@ -72,7 +72,7 @@ class IntegratedTimestepsNavigator(FlyNavigator):
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, 
 			pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame) ## Update the odor features at initalized fly location
-		self.filtered_obs += 1/self.advance_timesteps*(odor_obs - self.filtered_obs)
+		self.filtered_obs += 1/self.features_filter_size*(odor_obs - self.filtered_obs)
 		self.all_obs[:self.num_odor_obs] = self.filtered_obs
 		self._add_theta_observation()
 

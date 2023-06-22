@@ -146,6 +146,7 @@ def objective(trial):
     gamma=training_dict['GAMMA'], gae_lambda=training_dict['GAE_LAMBDA'], clip_range=training_dict['CLIP_RANGE'], vf_coef=training_dict['VF_COEF'], ent_coef=training_dict['ENT_COEF'])
     model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'])
     mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=training_dict["TEST_EPISODES"], warn=False)
+    env.close() ## Hoping this helps...
     del env
     return mean_reward
 

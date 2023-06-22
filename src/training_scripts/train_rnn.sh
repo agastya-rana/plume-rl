@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --partition=day
-#SBATCH --job-name=rnn_shaping
+#SBATCH --job-name=rnn_baseline
 #SBATCH --mem-per-cpu=42G
 #SBATCH --cpus-per-task=8
 #SBATCH --open-mode=append

@@ -1,5 +1,4 @@
 import sys
-print(sys.path)
 
 ## Trains the baseline RNN on the odor plume using PPO on actor-critic MLP heads stemming from the RNN feature extractor
 from src.models.rnn_baseline import *
@@ -47,6 +46,7 @@ output_dict = {
     'RECORD_SUCCESS': False, ## whether to record rewards and number of successful episodes
     'SAVE_DIRECTORY': os.path.join('..', 'trained_models', 'rnn'), ## directory to save model
     'RECORD_STATE_ACTION': 500, ## number of episodes to record state and action at each step in testing
+    "RENDER_VIDEO": False, ## whether to render the video of the agent
 }
 
 agent_dict = {
@@ -58,19 +58,23 @@ agent_dict = {
 	"MIN_TURN_DUR_S": 0.18,
 	"EXCESS_TURN_DUR_S": 0.18,
     "GOAL_RADIUS_MM": 10, #success radius in mm
+    "INT_TIMESTEP": False,
+    "INTEGRATED_DT": 0.2,
+    "FEATURES_FILTER_SIZE": 5, ## In units of old (fine-grained) timesteps, so 5 is approx 0.08s
 }
 
 reward_dict = {
-	"SOURCE_REWARD": 10000,
+	"SOURCE_REWARD": 400,
 	"PER_STEP_REWARD": -1/60,
-	"WALL_PENALTY": -5000,
+	"WALL_PENALTY": -400,
 	"WALL_MAX_X_MM": 330,
 	"WALL_MIN_X_MM": -10,
 	"WALL_MIN_Y_MM": 0,
 	"WALL_MAX_Y_MM": 180,
-	"RADIAL_REWARD_SCALE": 0.1,
+	"RADIAL_REWARD": 0.01,
     "CONC_UPWIND_REWARD": 1/60,
     'CONC_REWARD': 1/60,
+    'MOTION_REWARD': 0,
 }
 
 training_dict = {
@@ -78,17 +82,18 @@ training_dict = {
     "POLICY": "MlpLstmPolicy",
     "N_EPISODES": 5000,
     "MAX_EPISODE_LENGTH": 5000,
+    "LEARNING_RATE": 0.0003,
     "GAMMA": 0.995, ## discount factor
     "GAE_LAMBDA": 0.95, ## GAE parameter
     "CLIP_RANGE": 0.2, ## clip range for PPO
     "VF_COEF": 0.5, ## value function coefficient in loss factor
-    "ENT_COEF": 0.01, ## entropy coefficient in loss factor
-    "LSTM_HIDDEN_SIZE": 16, ## size of LSTM hidden state
-    "ACTOR_CRITIC_LAYERS": [16, 64, 64], ## MLP layers for actor-critic heads; first dimension should be lstm_hidden_size
+    "ENT_COEF": 0.005, ## entropy coefficient in loss factor
+    "LSTM_HIDDEN_SIZE": 32, ## size of LSTM hidden state
+    "ACTOR_CRITIC_LAYERS": [64,], ## MLP layers for actor-critic heads; first dimension should be lstm_hidden_size OR NOT?
     "N_ENVS": 8, ## number of parallel environments/CPU cores
     "N_STEPS": 512, ## number of steps per environment per update
-    "MODEL_NAME": "rnn_shaping", ## name of model to save
-    "TB_LOG": "./logs/rnn_shaping/", ## directory to save tensorboard logs
+    "MODEL_NAME": "rnn_baseline", ## name of model to save
+    "TB_LOG": "./logs/rnn_baseline/", ## directory to save tensorboard logs
     "TEST_EPISODES": 1000, ## number of episodes to test the model
     "N_HIDDEN_UNITS": 3, ## number of hidden units in MLP layers
 }

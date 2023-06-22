@@ -2,6 +2,7 @@
 
 from stable_baselines3 import DQN
 from src.environment.env_variations import HistoryNavigator
+from src.environment.utilities import *
 import stable_baselines3
 import numpy as np
 import os
@@ -35,10 +36,12 @@ class FilterExtractor(BaseFeaturesExtractor):
 
 
 def train_model(config):
+    print(config)
     seed = int(sys.argv[1])
     rng = np.random.default_rng(seed)
     environment = HistoryNavigator(rng = rng, config = config)
     print(hasattr(environment, 'seed'))
+    store_config(config)
     training_dict = config['training']
     policy_kwargs={"net_arch": [training_dict['N_HIDDEN_UNITS']]*training_dict['N_HIDDEN_LAYERS']}
     if training_dict['FEATURES_EXTRACTOR_CLASS'] is not None:

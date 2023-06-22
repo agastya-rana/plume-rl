@@ -1,6 +1,7 @@
 from sb3_contrib import RecurrentPPO
 from src.environment.gym_environment_class import *
 from src.environment.env_variations import *
+from src.environment.utilities import *
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 import os
 import numpy as np
@@ -16,7 +17,9 @@ def make_env(i, config_dict):
 
 
 def train_model(config):
+    print_dict(config)
     training_dict = config['training']
+    store_config(config)
     ## Define the environment here
     ## Define the model to be run
     model_class = training_dict["MODEL_CLASS"]
@@ -26,7 +29,7 @@ def train_model(config):
     model = model_class(training_dict["POLICY"], env, verbose=1, n_steps=training_dict["N_STEPS"], batch_size=training_dict["N_STEPS"]*training_dict["N_ENVS"], 
     policy_kwargs={"lstm_hidden_size": training_dict['LSTM_HIDDEN_SIZE'], "net_arch": training_dict['ACTOR_CRITIC_LAYERS']},
     gamma=training_dict['GAMMA'], gae_lambda=training_dict['GAE_LAMBDA'], clip_range=training_dict['CLIP_RANGE'], vf_coef=training_dict['VF_COEF'], ent_coef=training_dict['ENT_COEF'],
-    tensorboard_log=training_dict['TB_LOG'])
+    tensorboard_log=training_dict['TB_LOG'], learning_rate=training_dict['LEARNING_RATE'])
     # Train the model
 
     model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'], tb_log_name=training_dict['MODEL_NAME'])
@@ -52,8 +55,8 @@ def test_model(config):
         action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
         if episode_no < num_record:
             ## Store state and action
-            state_arr[episode_no, render_env.pdor_plume.frame_number, :] = obs
-            action_arr[episode_no, render_env.pdor_plume.frame_number, :] = action
+            state_arr[episode_no, render_env.odor_plume.frame_number, :] = obs
+            action_arr[episode_no, render_env.odor_plume.frame_number, :] = action
         obs, _, done, _ = render_env.step(action)
         if episode_no < 10:
             render_env.render()

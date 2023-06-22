@@ -60,6 +60,7 @@ class OdorPlumeFromMovie:
     
     def pick_random_frame(self, rng, delay=10):
         self.frame_number = np.random.randint(self.start_frame, self.stop_frame-delay-1)
+        print(self.frame_number, flush=True)
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.frame_number)
         self.advance(rng)
 
