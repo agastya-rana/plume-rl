@@ -139,7 +139,7 @@ class PlumeSummary(object):
                         ## Remove the NaNs
                         stat = stats[:, k]
                         stat = stat[~np.isnan(stat)]
-                        self.marginals[i, j, k, :] = np.histogram(stat, bins=self.stat_bins[k], density=False)[0]
+                        self.marginals[i, j, k, :] = np.histogram(stat, bins=self.stat_bins[k], density=True)[0]
                 else:
                     self.counts[i, j], self.marginals[i, j] = self._bin_stats(stats)
 
