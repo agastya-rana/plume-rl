@@ -14,12 +14,13 @@ from stable_baselines3.common.vec_env import VecEnv
 import stable_baselines3.common.utils
 from stable_baselines3.common.callbacks import BaseCallback
 
+plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'longer_wider_intermittent_final.mp4')
 
-plume_one_config = {
+plume_dict = {
 	"MM_PER_PX": 0.154,
 	"MAX_CONCENTRATION": 255,
 	"PLUME_TYPE": 'movie',
-	"MOVIE_PATH": os.path.join('..', 'src', 'data', 'plume_movies', 'longer_wider_intermittent_final.mp4'),
+	"MOVIE_PATH": plume_movie_path,
 	"MIN_FRAME": 0,
 	"STOP_FRAME": 3233,
 	"RESET_FRAME_RANGE": np.array([0, 300]),
@@ -35,9 +36,6 @@ plume_one_config = {
 	"INIT_THETA_MAX": 2*np.pi,
 	"PX_THRESHOLD": 0,
 }
-
-plume_dict_list = [plume_one_config]
-plume_dict{"PLUME_DICT_LIST":plume_dict_list}
 
 state_dict = {
 	"USE_COSINE_AND_SIN_THETA": True,
