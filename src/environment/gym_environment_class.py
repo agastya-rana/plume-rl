@@ -71,17 +71,32 @@ class FlyNavigator(Env):
 		self.min_turn_dur = agent_dict['MIN_TURN_DUR_S'] ## Minimum turn duration in seconds
 		self.excess_turn_dur = agent_dict['EXCESS_TURN_DUR_S'] ## Scale parameter for the exponential distribution of turn durations
 		self.dt = agent_dict['DELTA_T_S']
-		
 		## Define odor plume parameters
-		if plume_dict['PLUME_TYPE'] == 'movie':
-			self.odor_plume = OdorPlumeFromMovie(config) ## Defines the odor plume the fly is navigating in.
-			self.max_frames = plume_dict['STOP_FRAME']
+
+		plume_dict_list = plume_dict['PLUME_DICT_LIST']
 		
-		elif plume_dict['PLUME_TYPE'] == 'ribbon':
+		self.plume_list = []
 
-			self.odor_plume = StaticGaussianRibbon(config)
-			self.max_frames = plume_dict['STOP_FRAME']
+		for i, config in enumerate(plume_dict_list):
 
+			if config['PLUME_TYPE'] == 'movie':
+
+				self.plume_list.append(OdorPlumeFromMovie(config))
+
+			elif config['PLUME_TYPE'] == 'ribbon':
+
+				self.plume_list.append(StaticGaussianRibbon(config))
+
+		
+		if len(self.plume_list)==1:
+
+			self.plume_probs=np.array([1])
+
+		else:
+
+			self.plume_probs=plume_dict['PLUME_PROBS'] #probability with which each plume should be chosen. Order of probabilities should correspond to list order above.
+		
+		self.plume_inds = np.arange(0,len(self.plume_probs)) #list of plume indices that gets sampled from with plume probs 		
 		self.source_location = plume_dict['SOURCE_LOCATION_MM']
 		self.mm_per_px = plume_dict['MM_PER_PX']
 		self.conc_threshold = state_dict['CONCENTRATION_BASE_THRESHOLD']
@@ -155,7 +170,10 @@ class FlyNavigator(Env):
 		self.trajectory_number = 0
 		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
 		flip = self.rng.choice([True, False])
+		plume_ind = self.rng.choice(self.plume_inds, p = self.plume_probs)
+		self.odor_plume = self.odor_plume_list[plume_ind]
 		self.odor_plume.reset(flip = flip, rng = self.rng)
+		self.max_frames = self.odor_plume.stop_frame
 		self.turn_durs = self.min_turn_dur + self.rng.exponential(scale = self.excess_turn_dur, size = self.max_frames)
 		self.num_turns = 0
 		odor_on = self.odor_plume.frame > self.conc_threshold
