@@ -24,7 +24,6 @@ class FlyNavigator(Env):
     """
 	
 	def __init__(self, rng, config):
-
 		state_dict = config["state"]
 		agent_dict = config["agent"]
 		plume_dict = config["plume"]

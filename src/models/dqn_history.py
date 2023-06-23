@@ -1,7 +1,7 @@
 ## This file contains the code for training a DQN agent with history dependence using the HistoryNavigator environment
 
 from stable_baselines3 import DQN
-from src.environment.env_variations import HistoryNavigator
+from src.environment.env_variations import HistoryNavigator, HistoryTimestepNavigator, GoalDirectedNavigator
 from src.environment.utilities import *
 import stable_baselines3
 import numpy as np
@@ -39,17 +39,27 @@ def train_model(config):
     print(config)
     seed = int(sys.argv[1])
     rng = np.random.default_rng(seed)
-    environment = HistoryNavigator(rng = rng, config = config)
+    try:
+        if config["agent"]["GOAL_DIRECTED"]:
+            environment = GoalDirectedNavigator(rng = rng, config = config)
+        else:
+            environment = HistoryTimestepNavigator(rng = rng, config = config) if config["agent"]["INT_TIMESTEP"] else HistoryNavigator(rng = rng, config = config)
+    except:
+        environment = HistoryTimestepNavigator(rng = rng, config = config) if config["agent"]["INT_TIMESTEP"] else HistoryNavigator(rng = rng, config = config)
     print(hasattr(environment, 'seed'))
     store_config(config)
     training_dict = config['training']
+    try:
+        exploration_fraction = training_dict['EXPLORATION_FRACTION']
+    except KeyError:
+        exploration_fraction = 0.1
     policy_kwargs={"net_arch": [training_dict['N_HIDDEN_UNITS']]*training_dict['N_HIDDEN_LAYERS']}
     if training_dict['FEATURES_EXTRACTOR_CLASS'] is not None:
         policy_kwargs['features_extractor_class'] = training_dict['FEATURES_EXTRACTOR_CLASS']
         policy_kwargs['features_extractor_kwargs'] = { "n_odor": len(config['state']["FEATURES"]), "n_heads": training_dict['N_HEADS'], "history_len": config["state"]['HIST_LEN'], "theta_dim": environment.theta_dim}
     learning_rate = stable_baselines3.common.utils.get_linear_fn(start = training_dict['MAX_ALPHA'], end = training_dict['MIN_ALPHA'], end_fraction = training_dict['LEARNING_END_FRACTION'])
     model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=training_dict["TB_LOG"], gamma = training_dict['GAMMA'], 
-	exploration_final_eps = training_dict['MIN_EPSILON'], learning_rate=learning_rate, policy_kwargs=policy_kwargs,)
+	exploration_final_eps = training_dict['MIN_EPSILON'], learning_rate=learning_rate, policy_kwargs=policy_kwargs, exploration_fraction=exploration_fraction,)
     model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'], tb_log_name=training_dict['MODEL_NAME'])
     # Save the model
     model.save(os.path.join(config["output"]["SAVE_DIRECTORY"], training_dict['MODEL_NAME']))
@@ -64,7 +74,13 @@ def test_model(config):
     config["output"]["RECORD_SUCCESS"] = True
     model = DQN.load(os.path.join(config["output"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
     rng = np.random.default_rng(seed=1)
-    render_env = HistoryNavigator(rng, config)
+    try:
+        if config["agent"]["GOAL_DIRECTED"]:
+            render_env = GoalDirectedNavigator(rng = rng, config = config)
+        else:
+            render_env = HistoryTimestepNavigator(rng = rng, config = config) if config["agent"]["INT_TIMESTEP"] else HistoryNavigator(rng = rng, config = config)
+    except:
+        render_env = HistoryTimestepNavigator(rng = rng, config = config) if config["agent"]["INT_TIMESTEP"] else HistoryNavigator(rng = rng, config = config)
     obs = render_env.reset()
     episode_no = 0
     num_record = config["output"]["RECORD_STATE_ACTION"]

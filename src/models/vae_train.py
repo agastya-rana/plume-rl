@@ -1,8 +1,9 @@
 ## This file has code to train the VAE assuming the optimal RNN is already trained.
 ## I need to simulate the VAE training episodes while simulating the RNN so I can capture the history dependence;
 from torch.utils.data import DataLoader, TensorDataset
-from ..src.vae import *
-from ..src.rnn_baseline import *
+from src.models.vae import *
+import numpy as np
+import torch
 
 def predict_proba(model, state):
     obs = obs_as_tensor(state, model.policy.device)

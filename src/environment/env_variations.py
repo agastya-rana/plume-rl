@@ -113,8 +113,7 @@ class HistoryNavigator(FlyNavigator):
 		self.all_obs[self.num_odor_obs:-self.theta_dim] = self.history.flatten()
 		self._add_theta_observation() ## remember, this amends theta at the last one or two frames of observation
 
-class HistoryTimestepNavigator(FlyNavigator):
-	## NOTE: THIS IS NOT COMPLETE.
+class HistoryTimestepNavigator(IntegratedTimestepsNavigator):
 	def __init__(self, rng, config):
 		super().__init__(rng, config)
 		self.history_len = config["state"]["HIST_LEN"] ## note that this doesn't include the current observation
@@ -136,15 +135,103 @@ class HistoryTimestepNavigator(FlyNavigator):
 			self.observation_space = Box(low=self.observable_bounds[:, 0], high=self.observable_bounds[:, 1])
 		## We use convention where most recent observation is first in the array (see _update_state)
 		self.all_obs = np.zeros(self.obs_dim).astype(int) if self.discrete_obs else np.zeros(self.obs_dim).astype('float32') ## Initialize all observables to 0
-		self.integrated_dt = config["agent"]["INTEGRATED_DT"]
-		self.features_filter_size = config["agent"]["FEATURES_FILTER_SIZE"]
-		self.advance_timesteps = int(self.integrated_dt/self.dt) ## This should be an exact multiple
-		assert self.advance_timesteps*self.dt == self.integrated_dt
-		self.filtered_obs = np.zeros((self.num_odor_obs,))
-	
 	
 	def step(self, action):
 		## Step the environment with the given action
 		## Add the current observation to the history, and remove the oldest observation
 		self.history = np.roll(self.history, 1)
 		self.history[0, :] = self.all_obs[:self.num_odor_obs]
+		return super().step(action)
+	
+	def _update_state(self):
+		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame)
+		self.filtered_obs += 1/self.features_filter_size*(odor_obs - self.filtered_obs)
+		self.all_obs[:self.num_odor_obs] = self.filtered_obs
+		self.all_obs[self.num_odor_obs:-self.theta_dim] = self.history.flatten()
+		self._add_theta_observation()
+
+
+class GoalDirectedNavigator(FlyNavigator):
+
+	## Not yet integrated with history or timestep, but this should be doable easily
+	## This class implements a navigator with a 2D box action space, interpreted as a vector whose direction is the desired direction of movement
+	## Its magnitude may be interpreted as a certainty in direction of movement if desired
+	## From this vector (the action), the step function decides whether to turn left, right (as in the original fly algorithm), or go straight (if the action is close enough to the current heading)
+
+	def __init__(self, rng, config):
+		super().__init__(rng, config)
+		self.action_space = Box(low=-1, high=1, shape=(2,))
+		goal_params = config["agent"]["GOAL_PARAMS"]
+		self.certainty = goal_params["CERTAINTY"] ## 0 if agent is precise, otherwise this is the constant use to scale random decisions; good val is 0.3
+		self.straight_tol = goal_params["STRAIGHT_TOL"] ## Tolerance for theta difference between goal and current direction; good val is probably 0.3 (radians)
+		self.goal_access = goal_params["GOAL_ACCESS"] ## Whether the agent has access to the goal direction
+		state_dict = config["state"]
+		if self.goal_access:
+			## Need to now change the observation space and related stuff to account for this
+			if self.discrete_obs:
+				assert self.certainty == 0, "Goal direction has no magnitude for dicrete agent"
+				assert self.odor_features.can_discretize, "Set of features used does not have discretization capability"
+				self.theta_discretization = state_dict['THETA_DISCRETIZATION']
+				all_obs_inds = copy.deepcopy(self.odor_features.discretization_index)
+				all_obs_inds.append(self.theta_discretization) #note that for discretized states it doesn't make sense to split into sin and cos so this assumes only 1 theta observable
+				all_obs_inds.append(self.theta_discretization) # this is the goal theta				
+				self.observation_space = MultiDiscrete(all_obs_inds)
+				self.theta_bins = np.linspace(0, 2*np.pi, self.theta_discretization+1)
+				self.observables = copy.deepcopy(state_dict['FEATURES'])
+				self.observables.append('goal direction')				
+				self.observables.append('theta')
+			else:
+				if self.use_cos_and_sin:
+					assert not self.discrete_obs, "using sin and cos but trying to discretize; use theta directly instead"
+					self.observable_bounds = np.vstack((self.odor_features.feat_bounds, np.array([[-1, 1]]*4))) ## bounds for cos and sin theta
+					self.observables = copy.deepcopy(state_dict['FEATURES'])
+					self.observables.append('goal_cos_theta')
+					self.observables.append('goal_sin_theta')
+					self.observables.append('cos_theta')
+					self.observables.append('sin_theta')
+
+				else:
+					self.observables = copy.deepcopy(state_dict['FEATURES'])
+					self.observables.append('goal_theta')
+					self.observables.append('theta')
+					self.observable_bounds = np.vstack((self.odor_features.feat_bounds, np.array([[0, 2*np.pi]]*2))) ## bounds for theta
+				self.observation_space = Box(low=self.observable_bounds[:, 0], high=self.observable_bounds[:, 1])
+			
+			self.num_odor_obs = len(state_dict['FEATURES'])
+			self.obs_dim = len(self.observables)
+			self.all_obs = np.zeros(self.obs_dim).astype(int) if self.discrete_obs else np.zeros(self.obs_dim).astype('float32') ## Initialize all observables to 0
+
+	def step(self, action):
+		## Find goal direction and magnitude
+		goal_mag = np.linalg.norm(action)
+		goal_vec = action/goal_mag
+		goal_theta = np.arctan2(goal_vec[1], goal_vec[0])
+		self._add_goal_obs(goal_theta)
+		## Find the difference between the goal direction and the current direction
+		theta_diff = goal_theta - self.fly_spatial_parameters.theta
+		## Wrap the difference to be between -pi and pi
+		theta_diff = (theta_diff + np.pi) % (2*np.pi) - np.pi
+		## If certainty is non-zero, then randomize theta_diff as normal with std deviation proportional to inverse of goal_mag
+		if self.certainty:
+			theta_diff += self.rng.normal(loc=0, scale=self.certainty/goal_mag)
+		## If the difference is small enough, go straight; if positive, turn left; if negative, turn right
+		if np.abs(theta_diff) < self.straight_tol:
+			action_new = 0
+		elif theta_diff > 0:
+			action_new = 1
+		else:
+			action_new = 2
+		return super().step(action_new) ## Note that the _update_state function called has dynamic binding, so it will call the one in this class
+	
+	def _add_goal_obs(self, goal_action):
+		if self.use_cos_and_sin:
+			#again, doesn't make sense to use cos and sin if discretizing, so this assumes no discretization
+			self.all_obs[-4] = goal_action[0]
+			self.all_obs[-3] = goal_action[1]
+		else:
+			goal_theta = np.arctan2(goal_action[1], goal_action[0])
+			if self.discrete_obs:
+				val = np.digitize(goal_theta, self.theta_bins)
+				self.all_obs[-2] = val - 1 ## -1 needed because digitize calls fist bin as bin 1 instead of bin 0
+			else:
+				self.all_obs[-2] = goal_theta
