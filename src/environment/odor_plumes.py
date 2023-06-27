@@ -64,3 +64,11 @@ class OdorPlumeFromMovie:
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.frame_number)
         self.advance(rng)
 
+    def nearest_odor_location(self, pos):
+        ## Given pos = (x, y) in mm. Returns the nearest odor location (point in frame greater than threshold) in mm
+        ## Convert pos to px
+        pos_px = (pos/self.px_per_mm).astype(int)
+        ## Get odor locations in (x,y) px format
+        odor_locations = np.argwhere(self.frame > self.px_threshold)
+        ## Get the nearest odor location
+        nearest_odor_location_px = odor_locations[np.argmin(np.linalg.norm(odor_locations-pos_px, axis=1))]

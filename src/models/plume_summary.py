@@ -106,7 +106,8 @@ class PlumeSummary(object):
             self.mean_right_sensor = np.mean(self.right_sensor_vals, axis=1)
             ## Compute the statistics
             self._compute_stats()
-            all_stats[t] = self.current_stats
+            ## Save the statistics
+            all_stats[t] = copy.deepcopy(self.current_stats)
             ## Advance the plume
             self.plume.advance(rng)
             ## Update prev sensor vals

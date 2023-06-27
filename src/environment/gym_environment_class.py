@@ -96,15 +96,16 @@ class FlyNavigator(Env):
 
 		## Reward shaping parameters
 		reward_dict = config['reward']
-		self.source_reward = reward_dict['SOURCE_REWARD']
-		self.per_step_reward = reward_dict['PER_STEP_REWARD']
+		self.source_reward = reward_dict['SOURCE_REWARD'] if 'SOURCE_REWARD' in reward_dict else 0
+		self.per_step_reward = reward_dict['PER_STEP_REWARD'] if 'PER_STEP_REWARD' in reward_dict else 0
 		## dict of potential shaping parameters; keys in [conc_penalty, conc_upwind, downwind, motion]
-		self.conc_upwind_reward = reward_dict['CONC_UPWIND_REWARD']
-		self.conc_reward = reward_dict['CONC_REWARD']
-		self.motion_reward = reward_dict['MOTION_REWARD']
-		self.radial_reward = reward_dict['RADIAL_REWARD']
+		self.conc_upwind_reward = reward_dict['CONC_UPWIND_REWARD'] if 'CONC_UPWIND_REWARD' in reward_dict else 0
+		self.conc_reward = reward_dict['CONC_REWARD'] if 'CONC_REWARD' in reward_dict else 0
+		self.motion_reward = reward_dict['MOTION_REWARD'] if 'MOTION_REWARD' in reward_dict else 0
+		self.radial_reward = reward_dict['RADIAL_REWARD'] if 'RADIAL_REWARD' in reward_dict else 0
+		self.stray_reward = reward_dict['STRAY_REWARD'] if 'STRAY_REWARD' in reward_dict else 0
 		
-		self.wall_penalty = reward_dict['WALL_PENALTY']
+		self.wall_penalty = reward_dict['WALL_PENALTY'] if 'WALL_PENALTY' in reward_dict else 0
 		self.wall_max_x = reward_dict['WALL_MAX_X_MM']
 		self.wall_min_x = reward_dict['WALL_MIN_X_MM']
 		self.wall_min_y = reward_dict['WALL_MIN_Y_MM']
@@ -210,7 +211,7 @@ class FlyNavigator(Env):
 				self.all_episode_success.append(1) if self.reached_source else self.all_episode_success.append(0)
 			self.episode_incrementer += 1
 
-		info = {}
+		info = {"success": 1 if (self.done and self.reached_source) else 0, "total_episode_reward": self.total_episode_reward,}
 		return self.all_obs, reward, self.done, info
 	
 	def _get_additional_rewards(self):
@@ -231,8 +232,11 @@ class FlyNavigator(Env):
 				return reward
 
 		if self.radial_reward: #for giving reward for decreasing distance from source
-			non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
-			non_zero_check = np.sum(non_zero_check)>0
+			if False: ## change this for another parameter
+				non_zero_check = self.all_obs[:self.num_odor_obs] != 0 #want to give this reward only when at least one odor feature is non-zero
+				non_zero_check = np.sum(non_zero_check)>0
+			else:
+				non_zero_check = 1
 			reward += self.radial_reward*(self.previous_distance-current_distance)*non_zero_check
 			self.previous_distance = copy.deepcopy(current_distance)
 
@@ -246,6 +250,12 @@ class FlyNavigator(Env):
 			new_potential = self.conc_reward*self.all_obs[0]
 			old_potential = self.conc_reward*self.prev_conc
 			reward += self.gamma*new_potential - old_potential
+		
+		## Implementation of negative reward for straying far from nearest odor location on plume
+		if self.stray_reward:
+			nearest_odor_loc = self.odor_plume.nearest_odor_location(pos)
+			nearest_odor_dist = np.linalg.norm(pos - nearest_odor_loc)
+			reward -= self.odor_stray_reward*nearest_odor_dist
 	
 		return reward
 
