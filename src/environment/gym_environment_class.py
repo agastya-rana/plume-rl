@@ -107,6 +107,7 @@ class FlyNavigator(Env):
 		self.per_step_reward = reward_dict['PER_STEP_REWARD'] if 'PER_STEP_REWARD' in reward_dict else 0
 		## dict of potential shaping parameters; keys in [conc_penalty, conc_upwind, downwind, motion]
 		self.conc_upwind_reward = reward_dict['CONC_UPWIND_REWARD'] if 'CONC_UPWIND_REWARD' in reward_dict else 0
+		self.upwind_reward = reward_dict['UPWIND_REWARD'] if 'UPWIND_REWARD' in reward_dict else 0
 		self.conc_reward = reward_dict['CONC_REWARD'] if 'CONC_REWARD' in reward_dict else 0
 		self.motion_reward = reward_dict['MOTION_REWARD'] if 'MOTION_REWARD' in reward_dict else 0
 		self.radial_reward = reward_dict['RADIAL_REWARD'] if 'RADIAL_REWARD' in reward_dict else 0

@@ -11,6 +11,7 @@ class OdorPlumeFromMovie:
         self.start_frame = plume_dict['MIN_FRAME']
         self.stop_frame = plume_dict['STOP_FRAME']
         self.px_threshold = plume_dict['PX_THRESHOLD']
+        self.px_per_mm = plume_dict['PX_PER_MM']
         self.video_capture = cv2.VideoCapture(self.movie_path)
         self.fps = self.video_capture.get(cv2.CAP_PROP_FPS) ## Gets the FPS
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame) ## Sets the frame number to the frame number of the first frame
@@ -64,8 +65,20 @@ class OdorPlumeFromMovie:
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.frame_number)
         self.advance(rng)
 
-class StaticGaussianRibbon:
+    
+    def nearest_odor_location(self, pos):
+        ## Given pos = (x, y) in mm. Returns the nearest odor location (point in frame greater than threshold) in mm
+        ## Convert pos to px
+        pos_px = (pos*self.px_per_mm).astype(int)
+        ## Get odor locations in (x,y) px format
+        odor_locations = np.argwhere(self.frame > self.px_threshold) ## Returns a list of (x,y) px coordinates np array of shape (n,2)
+        ## Get the nearest odor location
+        nearest_odor_location_px = odor_locations[np.argmin(np.linalg.norm(odor_locations-pos_px, axis=1))]
+        ## Convert to mm
+        nearest_odor_location_mm = nearest_odor_location_px/self.px_per_mm
+        return nearest_odor_location_mm
 
+class StaticGaussianRibbon(OdorPlumeFromMovie):
     def __init__(self, config):
         plume_dict = config['plume']
         self.sigma = plume_dict['RIBBON_SPREAD_MM']
@@ -100,11 +113,3 @@ class StaticGaussianRibbon:
 
         return
 
-    def nearest_odor_location(self, pos):
-        ## Given pos = (x, y) in mm. Returns the nearest odor location (point in frame greater than threshold) in mm
-        ## Convert pos to px
-        pos_px = (pos/self.px_per_mm).astype(int)
-        ## Get odor locations in (x,y) px format
-        odor_locations = np.argwhere(self.frame > self.px_threshold)
-        ## Get the nearest odor location
-        nearest_odor_location_px = odor_locations[np.argmin(np.linalg.norm(odor_locations-pos_px, axis=1))]
