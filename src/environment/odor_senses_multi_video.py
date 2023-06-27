@@ -112,11 +112,13 @@ class OdorFeatures():
 
 		self.mean_left_odor = np.mean(self.left_odors)
 		self.mean_right_odor = np.mean(self.right_odors)
+		self.concentration = 1/2*(self.mean_right_odor+self.mean_left_odor)
 
 		if self.use_base_threshold_for_mean:
 
 			self.mean_left_odor = self.mean_left_odor*(self.mean_left_odor>self.base_threshold)
 			self.mean_right_odor = self.mean_right_odor*(self.mean_right_odor>self.base_threshold)
+			self.concentration = self.concentration*(self.concentration>self.base_threshold)
 	
 	def get_features(self):
 		self.update_bins()

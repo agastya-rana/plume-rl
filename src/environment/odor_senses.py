@@ -112,6 +112,7 @@ class OdorFeatures():
 
 		self.mean_left_odor = np.mean(self.left_odors)
 		self.mean_right_odor = np.mean(self.right_odors)
+		self.concentration = 1/2*(self.mean_right_odor+self.mean_left_odor)
 
 		if self.use_base_threshold_for_mean:
 
