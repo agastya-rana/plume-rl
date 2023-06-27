@@ -1,10 +1,17 @@
-from src.models.plume_summary import PlumeSummary
+import sys
+print(sys.path)
+
+## Trains the baseline RNN on the odor plume using PPO on actor-critic MLP heads stemming from the RNN feature extractor
+from src.models.rnn_baseline import *
+from src.environment.gym_environment_class import *
 import os
 import numpy as np
-plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'longer_wider_intermittent_final.mp4')
-
+import gym
+from sb3_contrib import RecurrentPPO
+from stable_baselines3.common.vec_env import VecEnv
+plume_movie_path = os.path.join('..', 'src', 'data', 'plume_movies', 'intermittent_smoke.avi')
 plume_dict = {
-    "MM_PER_PX": 0.154,
+    "MM_PER_PX": 0.2,
     "MAX_CONCENTRATION": 255,
     "PX_THRESHOLD": 100,
     "MOVIE_PATH": plume_movie_path,
@@ -51,6 +58,9 @@ agent_dict = {
 	"MIN_TURN_DUR_S": 0.18,
 	"EXCESS_TURN_DUR_S": 0.18,
     "GOAL_RADIUS_MM": 10, #success radius in mm
+    "INT_TIMESTEP": True, ## whether to use larger timesteps
+    "INTEGRATED_DT": 1/10, ## timestep for integration
+    "FEATURES_FILTER_SIZE": 5 ## size of filter for temporal filtering of features in units of original dt
 }
 
 reward_dict = {
@@ -66,10 +76,31 @@ reward_dict = {
     'CONC_REWARD': 1/60,
 }
 
-training_dict = {}
+training_dict = {
+    "MODEL_CLASS": RecurrentPPO,
+    "POLICY": "MlpLstmPolicy",
+    "N_EPISODES": 5000,
+    "MAX_EPISODE_LENGTH": 5000,
+    "GAMMA": 0.995, ## discount factor
+    "GAE_LAMBDA": 0.95, ## GAE parameter
+    "CLIP_RANGE": 0.2, ## clip range for PPO
+    "VF_COEF": 0.5, ## value function coefficient in loss factor
+    "ENT_COEF": 0.01, ## entropy coefficient in loss factor
+    "LSTM_HIDDEN_SIZE": 16, ## size of LSTM hidden state
+    "ACTOR_CRITIC_LAYERS": [16, 64, 64], ## MLP layers for actor-critic heads; first dimension should be lstm_hidden_size
+    "N_ENVS": 8, ## number of parallel environments/CPU cores
+    "N_STEPS": 512, ## number of steps per environment per update
+    "MODEL_NAME": "rnn_shaping", ## name of model to save
+    "TB_LOG": "./logs/rnn_shaping/", ## directory to save tensorboard logs
+    "TEST_EPISODES": 1000, ## number of episodes to test the model
+}
+
 config_dict = {"agent": agent_dict, "plume": plume_dict, "state": state_dict, "output": output_dict, "training": training_dict, "reward": reward_dict}
 
-rbins = [20*i for i in range(8)]
-thetabins = np.linspace(-np.pi/2, np.pi/2, 10)
-summary = PlumeSummary(config_dict, rbins, thetabins, n_points=1000, samples_per_point=500)
-summary.plot()
+if __name__ == "__main__":
+    ## Train the model
+    if len(sys.argv) > 1:
+        config_dict["training"]["MODEL_NAME"] += '_' + sys.argv[1]
+    model = train_model(config_dict)
+    ## Test the model
+    test_model(config_dict)

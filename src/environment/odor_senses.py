@@ -27,11 +27,11 @@ class OdorFeatures():
 		self.can_discretize = set(self.features).issubset(set(['conc_disc', 'grad_disc', 'hrc_disc']))
 		if state_dict["DISCRETE_OBSERVABLES"]:
 			assert self.can_discretize, "Can only discretize concentration, gradient, and hrc"
+			self.threshold_style = state_dict['CONCENTRATION_THRESHOLD_STYLE']
+			self.base_threshold = state_dict['CONCENTRATION_BASE_THRESHOLD']
 		self.clear()
 
-		self.threshold_style = state_dict['CONCENTRATION_THRESHOLD_STYLE']
-		self.base_threshold = state_dict['CONCENTRATION_BASE_THRESHOLD']
-		self.use_base_threshold_for_mean = state_dict['USE_BASE_THRESHOLD_FOR_MEAN']
+		self.base_threshold = state_dict['USE_BASE_THRESHOLD_FOR_MEAN']
 		self.max_conc = plume_dict['MAX_CONCENTRATION']
 		timescales = state_dict['TIMESCALES_S']
 		self.tau = timescales['FILTER'] if "FILTER" in timescales else None
@@ -39,6 +39,10 @@ class OdorFeatures():
 		self.max_t_L = self.dt*plume_dict["STOP_FRAME"]
 		self.fix_antenna = state_dict['FIX_ANTENNA']
 		self.normalize = state_dict['NORMALIZE_ODOR_FEATURES']
+		try:
+			self.normalize_factor = state_dict["NORMALIZE_FACTOR"]
+		except:
+			self.normalize_factor = 1
 		self.static_sensor = None
 
 		feature_func_map = {'conc': self.get_conc, 'grad': self.get_grad, 'hrc': self.get_hrc, 'conc_left': self.get_conc_left, 'conc_right': self.get_conc_right, 'intermittency': self.get_intermittency, 't_L': self.get_t_L, 
@@ -112,13 +116,10 @@ class OdorFeatures():
 
 		self.mean_left_odor = np.mean(self.left_odors)
 		self.mean_right_odor = np.mean(self.right_odors)
-		self.concentration = 1/2*(self.mean_right_odor+self.mean_left_odor)
-
-		if self.use_base_threshold_for_mean:
-
+		if self.base_threshold:
 			self.mean_left_odor = self.mean_left_odor*(self.mean_left_odor>self.base_threshold)
 			self.mean_right_odor = self.mean_right_odor*(self.mean_right_odor>self.base_threshold)
-			self.concentration = 1/2*(self.mean_right_odor+self.mean_left_odor)
+		self.concentration = (self.mean_left_odor + self.mean_right_odor)/2
 	
 	def get_features(self):
 		self.update_bins()
@@ -145,10 +146,10 @@ class OdorFeatures():
 		return (self.mean_left_odor + self.mean_right_odor)/(2*self.max_conc) if normalize else (self.mean_left_odor + self.mean_right_odor)/2
 	
 	def get_grad(self, normalize=False):
-		return (self.mean_left_odor - self.mean_right_odor) / self.max_conc if normalize else self.mean_left_odor - self.mean_right_odor
+		return (self.mean_left_odor - self.mean_right_odor) / self.max_conc*self.normalize_factor if normalize else self.mean_left_odor - self.mean_right_odor
 
 	def get_hrc(self, normalize=False):
-		return (self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor)/(self.max_conc**2) if normalize else self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor
+		return (self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor)/(self.max_conc**2)*self.normalize_factor if normalize else self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor
 	
 	def get_intermittency(self, normalize=False):
 		self.intermittency += 1/self.tau*(self.odor_bin-self.intermittency)*self.dt
@@ -217,28 +218,3 @@ class OdorFeatures():
 		self.t_whiff = -100.
 		self.t_L = 1000.
 		self.odor_bin = False
-	
-	def static_sensor(self, pos_set, odor_frame, theta=np.pi): ## default is upwind
-		## Problem with this separate approach is that func evals depend on the regular class variables - can't define new ones here
-		self.std_left_box, self.std_right_box = self._make_L_R_std_box(mm_per_px = self.mm_per_px, antenna_height_mm = agent_dict['ANTENNA_LENGTH_MM'], antenna_width_mm = agent_dict['ANTENNA_WIDTH_MM'])
-
-		if self.static_sensor is None:
-			self.left_sensors = self._rotate_points(self.std_left_box, theta)[None, :] + pos_set[:, None, :]
-			self.right_sensors = self._rotate_points(self.std_right_box, theta)[None, :] + pos_set[:, None, :]
-		self.left_sensor_idxs = np.rint(self.left_pts/self.mm_per_px).astype(int)
-		self.right_sensor_idxs = np.rint(self.right_pts/self.mm_per_px).astype(int)
-		try:
-			self.left_sensor_vals = odor_frame[self.left_sensor_idxs[:,0], self.left_sensor_idxs[:,1]]
-		except IndexError:
-			self.left_sensor_vals = np.zeros(self.num_pts) ## If the agent is out of bounds, then the odor is zero.
-		try:
-			self.right_sensor_vals = odor_frame[self.right_sensor_idxs[:,0], self.right_sensor_idxs[:,1]]
-		except IndexError:
-			self.right_sensor_vals = np.zeros(self.num_pts)
-		self.mean_left_sensor = np.mean(self.left_sensor_vals, axis=1)
-		self.mean_right_sensor = np.mean(self.right_sensor_vals, axis=1)
-
-		## Returns the odor features requested in the order of state_dict['features']
-		#self._rotate_and_translate_sensors(theta = theta, pos = pos)
-		#self._get_left_right_odors(odor_frame=odor_frame)
-		#return self.get_features()

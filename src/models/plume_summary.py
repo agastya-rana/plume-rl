@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 from src.environment.odor_plumes import *
 from src.environment.odor_senses import *
 
@@ -10,7 +11,7 @@ from src.environment.odor_senses import *
 
 class PlumeSummary(object):
 
-    def __init__(self, config, ax1_bins, ax2_bins, n_stat_bins=10, stat_bin_type='linear', axes='polar', n_points=1000, samples_per_point = 5, feats=['conc', 'grad', 'hrc']):
+    def __init__(self, config, ax1_bins, ax2_bins, n_stat_bins=10, stat_bin_type='linear', axes='polar', n_points=1000, samples_per_point = 5, feats=['conc', 'grad', 'hrc'], exclude_zero=False):
         self.plume = OdorPlumeFromMovie(config, load=False)
         self.feats = feats
         self.n_stats = len(feats)
@@ -18,6 +19,7 @@ class PlumeSummary(object):
         self.ax1_bins = np.array(ax1_bins) ## Could be r or x
         self.ax2_bins = np.array(ax2_bins) ## Could be theta or y
         self.n_points = n_points
+        self.exclude_zero = exclude_zero
         self.samples_per_point = samples_per_point
         self.bin_type = axes
         self.n_stat_bins = n_stat_bins
@@ -104,7 +106,8 @@ class PlumeSummary(object):
             self.mean_right_sensor = np.mean(self.right_sensor_vals, axis=1)
             ## Compute the statistics
             self._compute_stats()
-            all_stats[t] = self.current_stats
+            ## Save the statistics
+            all_stats[t] = copy.deepcopy(self.current_stats)
             ## Advance the plume
             self.plume.advance(rng)
             ## Update prev sensor vals
@@ -129,11 +132,21 @@ class PlumeSummary(object):
                 points = self._generate_points_in_bin(i, j)
                 ## Normalize the counts by the number of points
                 stats = self._compute_stats_at_location(points) ## stats has shape (n_points*samples_per_point, n_stats)
-                self.counts[i, j], self.marginals[i, j] = self._bin_stats(stats)
+                ## Exclude zeroes if chosen to do so
+                if self.exclude_zero:
+                    ## Set the zero values to NaN
+                    stats[stats == 0] = np.nan
+                    for k in range(self.n_stats):
+                        ## Remove the NaNs
+                        stat = stats[:, k]
+                        stat = stat[~np.isnan(stat)]
+                        self.marginals[i, j, k, :] = np.histogram(stat, bins=self.stat_bins[k], density=True)[0]
+                else:
+                    self.counts[i, j], self.marginals[i, j] = self._bin_stats(stats)
+
     
     def _generate_points_in_bin(self, i, j):
         ## Generate a set of points in the given bin; np array of dim (n_points, 2)
-        ## TODO: check that this works
         np.random.seed(0)
         ax1_samples = np.random.uniform(low=self.ax1_bins[i], high=self.ax1_bins[i+1], size=(self.n_points, 1))
         ax2_samples = np.random.uniform(low=self.ax2_bins[j], high=self.ax2_bins[j+1], size=(self.n_points, 1))
@@ -151,40 +164,31 @@ class PlumeSummary(object):
         marginal = np.array([np.sum(joint, axis=tuple(dim for dim in range(joint.ndim) if dim != i)) for i in range(self.n_stats)]) ## marginal is 2D array of shape (n_stats, n_stat_bins)
         return joint, marginal
 
-    def _plot_histograms(self, plot_type='pdf'):
+    def _plot_histograms(self, plot_type=['pdf', 'heatmap']):
         ## We make a n_features sets of plots, each of which are ax1_bins x ax2_bins histograms
         ## Now, we plot the histograms
         bin_centers_1 = [(self.ax1_bins[i]+self.ax1_bins[i+1])/2 for i in range(len(self.ax1_bins)-1)]
         bin_centers_2 = [(self.ax2_bins[i]+self.ax2_bins[i+1])/2 for i in range(len(self.ax2_bins)-1)]
-        if plot_type == 'pdf':
+        if 'pdf' in plot_type:
             for i in range(self.n_stats):
                 fig, axes = plt.subplots(len(self.ax2_bins)-1, len(self.ax1_bins)-1, sharex=True, sharey=True, figsize=(3*len(self.ax1_bins),2*len(self.ax2_bins)))
-                if self.bin_type == 'polar':
-                    for j in range(len(self.ax1_bins)-1):
-                        for k1 in range(len(self.ax2_bins)-1):
-                            k = len(self.ax2_bins)-k1-2
-                            # Create a subplot at the specified position
-                            dist = self.marginals[j, k][i]
-                            axes[k1, j].bar(self.stat_bins[i][:-1], dist, width=self.stat_bins[i][1]-self.stat_bins[i][0], align='edge', label=f"({bin_centers_1[j]:.2f}, {bin_centers_2[k]:.2f})")
-                            axes[k1, j].legend()
-                            axes[k1, j].set_yscale('log')
-                elif self.bin_type == 'cartesian':
-                    fig, axes = plt.subplots(len(self.ax2_bins)-1, len(self.ax1_bins)-1)
-                    for j in range(len(self.ax1_bins)-1):
-                        for k1 in range(len(self.ax2_bins)-1):
-                            k = len(self.ax2_bins)-k1-2
-                            dist = self.marginals[j, k][i]
-                            axes[k1, j].bar(self.stat_bins[i][:-1], dist, width=self.stat_bins[i][1]-self.stat_bins[i][0], align='edge', label=f"({bin_centers_1[j]:.2f}, {bin_centers_2[k]:.2f})")
-                            axes[k1, j].legend()
-                            axes[k1, j].set_yscale('log')
+                for j in range(len(self.ax1_bins)-1):
+                    for k1 in range(len(self.ax2_bins)-1):
+                        k = len(self.ax2_bins)-k1-2
+                        # Create a subplot at the specified position
+                        dist = self.marginals[j, k][i]
+                        axes[k1, j].bar(self.stat_bins[i][:-1], dist, width=self.stat_bins[i][1]-self.stat_bins[i][0], align='edge', label=f"({bin_centers_1[j]:.2f}, {bin_centers_2[k]:.2f})")
+                        axes[k1, j].legend()
+                        axes[k1, j].set_yscale('log')
+                        axes[k1, j].set_ylim([1e-4, 1])
                 plt.savefig(f"histogram_{self.feats[i]}.png")
 
-        elif plot_type == 'heatmap':
+        if 'heatmap' in plot_type:
             ## Plot the heatmap of the marginal distribution averages
             marg_avg = np.mean(self.marginals, axis=3)
             fig, axes = plt.subplots(1, self.n_stats, sharex=True, sharey=True, figsize=(3*self.n_stats, 2))
             for i in range(self.n_stats):
-                im = axes[i].imshow(marg_avg[:, :, i].T, cmap='hot')
+                im = axes[i].imshow(marg_avg[:, :, i].T, cmap='hot', norm=colors.LogNorm())
                 axes[i].set_xticks(np.arange(len(self.ax1_bins)-1))
                 axes[i].set_yticks(np.arange(len(self.ax2_bins)-1))
                 axes[i].set_xticklabels([f"{bin_centers_1[j]:.0f}" for j in range(len(self.ax1_bins)-1)])
@@ -196,8 +200,6 @@ class PlumeSummary(object):
             if self.bin_type == 'polar':
                 ## Plot polar heatmap of marg_avg
                 pass
-
-
         """
         for i in range(self.n_stats):
             fig, axes = plt.subplots(len(self.ax1_bins)-1, len(self.ax2_bins)-1)
@@ -210,6 +212,6 @@ class PlumeSummary(object):
                     axes[j, k].set_title("({}, {})".format(j, k))
             plt.savefig("histogram_{}.png".format(i))
         """
-    def plot(self, ptype='pdf'):
+    def plot(self, ptype=['pdf', 'heatmap']):
         self._populate_counts()
         self._plot_histograms(plot_type=ptype)

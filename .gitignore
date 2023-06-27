@@ -98,3 +98,7 @@ training_runs/
 logs/
 
 slurm/
+
+runs/
+
+trained_models/
