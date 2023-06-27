@@ -73,7 +73,7 @@ class StaticGaussianRibbon:
         self.mm_per_px = plume_dict['MM_PER_PX']
         self.source_conc = plume_dict['MAX_CONCENTRATION']
         self.source_location: np.ndarray = plume_dict['SOURCE_LOCATION_MM']
-        self.max_frames = plume_dict['STOP_FRAME']
+        self.stop_frame = plume_dict['STOP_FRAME']
         self.px_threshold = plume_dict['PX_THRESHOLD']
         self.frame_number = 0
         dim_x = np.rint(self.frame_x/self.mm_per_px).astype(int)
