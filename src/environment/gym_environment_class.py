@@ -57,7 +57,16 @@ class FlyNavigator(Env):
 
 		self.odor_features = OdorFeatures(config) ## Defines the odor features the fly senses.
 		self.fly_spatial_parameters = FlySpatialParameters(config) ## True (x,y,theta)
-	
+
+		## Define agent parameters
+		self.goal_radius = agent_dict['GOAL_RADIUS_MM']
+		self.min_turn_dur = agent_dict['MIN_TURN_DUR_S'] ## Minimum turn duration in seconds
+		self.excess_turn_dur = agent_dict['EXCESS_TURN_DUR_S'] ## Scale parameter for the exponential distribution of turn durations
+		self.antenna_height = agent_dict['ANTENNA_LENGTH_MM']
+		self.antenna_width = agent_dict['ANTENNA_WIDTH_MM']
+		self.detection_threshold = state_dict['DETECTION_THRESHOLD'] if 'DETECTION_THRESHOLD' in state_dict else None
+		self.detection_threshold_type = state_dict['DETECTION_THRESHOLD_TYPE'] if 'DETECTION_THRESHOLD_TYPE' in state_dict else "fixed"
+
 		## If only single plume movie, then initialize here since reset method will not call init_plume_variables
 		if 'PLUME_DICT_LIST' not in plume_dict:
 			self._init_plume_variables(plume_dict)
@@ -92,15 +101,6 @@ class FlyNavigator(Env):
 		self.obs_dim = len(self.observables)
 		self.all_obs = np.zeros(self.obs_dim).astype(int) if self.discrete_obs else np.zeros(self.obs_dim).astype('float32') ## Initialize all observables to 0
 		self.action_space = Discrete(4) ## 0: forward, 1: left, 2: right, 3: stop
-		
-		## Define agent parameters
-		self.goal_radius = agent_dict['GOAL_RADIUS_MM']
-		self.min_turn_dur = agent_dict['MIN_TURN_DUR_S'] ## Minimum turn duration in seconds
-		self.excess_turn_dur = agent_dict['EXCESS_TURN_DUR_S'] ## Scale parameter for the exponential distribution of turn durations
-		self.antenna_height = agent_dict['ANTENNA_LENGTH_MM']
-		self.antenna_width = agent_dict['ANTENNA_WIDTH_MM']
-		self.detection_threshold = state_dict['DETECTION_THRESHOLD'] if 'DETECTION_THRESHOLD' in state_dict else None
-		self.detection_threshold_type = state_dict['DETECTION_THRESHOLD_TYPE'] if 'DETECTION_THRESHOLD_TYPE' in state_dict else "fixed"
 				
 		## Render parameters
 		self.fig, self.ax = plt.subplots()
@@ -129,23 +129,23 @@ class FlyNavigator(Env):
 		#self.trajectory_number = 0
 		#self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
 
-	def _init_plume_variables(self, current_plume_dict):
+	def _init_plume_variables(self, plume_dict):
 		
-		dt = current_plume_dict['DELTA_T_S']
+		dt = plume_dict['DELTA_T_S']
 		self.dt = dt
 		self.odor_features.dt = dt
-		mm_per_px = current_plume_dict['MM_PER_PX']
+		mm_per_px = plume_dict['MM_PER_PX']
 		self.mm_per_px = mm_per_px
 		self.odor_features.mm_per_px = mm_per_px
 
-		self.odor_features.max_t_L = self.dt*(current_plume_dict['STOP_FRAME']-current_plume_dict['MIN_FRAME'])
+		self.odor_features.max_t_L = self.dt*(plume_dict['STOP_FRAME']-plume_dict['START_FRAME'])
 
 		## Set up odor features box
 		self.odor_features.std_left_box, self.odor_features.std_right_box = self.odor_features.make_L_R_std_box(self.mm_per_px, self.antenna_height, self.antenna_width)
 		self.odor_features.num_pts = np.shape(self.odor_features.std_left_box)[0]
 
 		## Set episode termination features
-		self.max_frames = current_plume_dict['STOP_FRAME']
+		self.max_frames = plume_dict['STOP_FRAME']
 		self.source_location = plume_dict['SOURCE_LOCATION_MM']
 		
 		## Define reset parameters
@@ -153,7 +153,7 @@ class FlyNavigator(Env):
 		self.theta_random_bounds = np.array(plume_dict['INIT_THETA_BOUNDS']) if 'INIT_THETA_BOUNDS' in plume_dict else np.array([0, 2*np.pi])
 		self.initial_max_reset_x = plume_dict['INITIAL_MAX_RESET_X_MM'] if 'INITIAL_MAX_RESET_X_MM' in plume_dict else self.max_reset_x
 		self.reset_x_shift = plume_dict['RESET_X_SHIFT_MM'] if 'RESET_X_SHIFT_MM' in plume_dict else 0
-		self.x_random_bounds = np.array([self.min_reset_x, self.initial_max_reset_x])
+		self.x_random_bounds = np.array([self.min_reset_x, self.max_reset_x])
 		self.y_random_bounds = np.array([self.min_reset_y, self.max_reset_y])
 		self.shift_episodes = plume_dict['SHIFT_EPISODES'] if 'SHIFT_EPISODES' in plume_dict and self.reset_x_shift > 0 else 0
 		
@@ -163,7 +163,7 @@ class FlyNavigator(Env):
 			raise Exception("WALL_BOX_MM not in specified for plume {i}".format(i=self.plume_ind))
 
 		## Set up fly spatial parameters
-		self.fly_spatial_parameters.dt = current_plume_dict['DELTA_T_S']
+		self.fly_spatial_parameters.dt = plume_dict['DELTA_T_S']
 		self.fly_spatial_parameters.walk_step_size = self.fly_spatial_parameters.dt*self.fly_spatial_parameters.walk_spd
 		self.fly_spatial_parameters.ang_step_size = self.fly_spatial_parameters.dt*self.fly_spatial_parameters.turn_ang_spd		
 
@@ -194,6 +194,9 @@ class FlyNavigator(Env):
 		odor_on = self.odor_plume.frame > self.detection_threshold
 		odor_on_indices = np.transpose(odor_on.nonzero())
 		valid_locations = odor_on_indices*self.mm_per_px
+		## TODO: delete soon
+		print(self.odor_plume.frame, odor_on_indices, valid_locations)
+
 
 		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
 			max_reset_x = np.min([self.max_reset_x, int(self.episode_incrementer/self.shift_episodes)*self.reset_x_shift+self.initial_max_reset_x])
