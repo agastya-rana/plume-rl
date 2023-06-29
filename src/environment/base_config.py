@@ -10,7 +10,7 @@ plume_dict = {
 	"SOURCE_LOCATION_MM": np.array([14, 93.6]),
     "MOVIE_PATH": plume_movie_path,
 
-    "RESET_BOX_MM": ((40, 200), (0, 180)) ## box of initialization positions ((x_min, x_max), (y_min, y_max)) in mm (later filtered to only those with odor signal)
+    "RESET_BOX_MM": ((40, 200), (0, 180)), ## box of initialization positions ((x_min, x_max), (y_min, y_max)) in mm (later filtered to only those with odor signal)
     "INITIAL_MAX_RESET_X_MM": 200, ## optional; default is x_max of RESET_BOX_MM
     "RESET_X_SHIFT_MM": 5, ## optional; default 0
     "SHIFT_EPISODES": 100, ## optional; default 0

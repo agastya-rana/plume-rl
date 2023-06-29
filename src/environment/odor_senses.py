@@ -34,7 +34,7 @@ class OdorFeatures():
 		self.detection_threshold = state_dict['DETECTION_THRESHOLD'] if "DETECTION_THRESHOLD" in state_dict else 0
 		self.threshold_type = state_dict["DETECTION_THRESHOLD_TYPE"] if "DETECTION_THRESHOLD_TYPE" in state_dict else "fixed"
 		if self.threshold_type == "adaptive":
-			self.threshold_adaptation_timescale = state_dict["DETECTION_THRESHOLD_TIMESCALE_S"] if "DETECTION_THRESHOLD_TIMESCALE_S" in state_dict else (raise Exception("Must specify DETECTION_THRESHOLD_TIMESCALE_S if using adaptive threshold")) 
+			self.threshold_adaptation_timescale = state_dict["DETECTION_THRESHOLD_TIMESCALE_S"]
 		
 		self.tau = state_dict['TAU_S'] if "TAU_S" in state_dict else 1 ## Time constant for exponential moving average used in intermittency calculation
 		if "MAX_T_L_S" in state_dict:

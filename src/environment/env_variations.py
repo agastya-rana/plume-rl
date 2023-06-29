@@ -8,9 +8,7 @@ import gym
 from src.environment.gym_environment_class import FlyNavigator
 from gym.spaces import Box, Discrete, MultiDiscrete
 import copy
-from src.environment.fly_spatial_parameters_multi_video import FlySpatialParametersMultiVideo
 from src.environment.odor_plumes import *
-from src.environment.odor_senses_multi_video import *
 
 class IntegratedTimestepsNavigator(FlyNavigator):
 	def __init__(self, rng, config):

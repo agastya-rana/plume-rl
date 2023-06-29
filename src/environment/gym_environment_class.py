@@ -126,15 +126,15 @@ class FlyNavigator(Env):
 			self.all_episode_rewards = []
 			self.all_episode_success = []
 		self.episode_incrementer = 0
-		self.trajectory_number = 0
-		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
+		#self.trajectory_number = 0
+		#self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan
 
 	def _init_plume_variables(self, current_plume_dict):
 		
-		dt = current_plume_dict['DELTA_T_S'] if 'DELTA_T_S' in current_plume_dict else raise Exception("DELTA_T_S not in specified for plume {i}".format(i=self.plume_ind))
+		dt = current_plume_dict['DELTA_T_S']
 		self.dt = dt
 		self.odor_features.dt = dt
-		mm_per_px = current_plume_dict['MM_PER_PX'] if 'MM_PER_PX' in current_plume_dict else raise Exception("MM_PER_PX not in specified for plume {i}".format(i=self.plume_ind))
+		mm_per_px = current_plume_dict['MM_PER_PX']
 		self.mm_per_px = mm_per_px
 		self.odor_features.mm_per_px = mm_per_px
 
@@ -145,11 +145,11 @@ class FlyNavigator(Env):
 		self.odor_features.num_pts = np.shape(self.odor_features.std_left_box)[0]
 
 		## Set episode termination features
-		self.max_frames = current_plume_dict['STOP_FRAME'] if 'STOP_FRAME' in current_plume_dict else raise Exception("STOP_FRAME not in specified for plume {i}".format(i=self.plume_ind))
-		self.source_location = plume_dict['SOURCE_LOCATION_MM'] if 'SOURCE_LOCATION_MM' in plume_dict else raise Exception("SOURCE_LOCATION_MM not in specified for plume {i}".format(i=self.plume_ind))
+		self.max_frames = current_plume_dict['STOP_FRAME']
+		self.source_location = plume_dict['SOURCE_LOCATION_MM']
 		
 		## Define reset parameters
-		(self.min_reset_x, self.max_reset_x), (self.min_reset_y, self.max_reset_y) = plume_dict["RESET_BOX_MM"] if 'RESET_BOX_MM' in plume_dict else raise Exception("RESET_BOX_MM not in specified for plume {i}".format(i=self.plume_ind))
+		(self.min_reset_x, self.max_reset_x), (self.min_reset_y, self.max_reset_y) = plume_dict["RESET_BOX_MM"]
 		self.theta_random_bounds = np.array(plume_dict['INIT_THETA_BOUNDS']) if 'INIT_THETA_BOUNDS' in plume_dict else np.array([0, 2*np.pi])
 		self.initial_max_reset_x = plume_dict['INITIAL_MAX_RESET_X_MM'] if 'INITIAL_MAX_RESET_X_MM' in plume_dict else self.max_reset_x
 		self.reset_x_shift = plume_dict['RESET_X_SHIFT_MM'] if 'RESET_X_SHIFT_MM' in plume_dict else 0
@@ -175,7 +175,7 @@ class FlyNavigator(Env):
 
 		## Reset render variables
 		self.trajectory_number = 0
-		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan - hopefully this still works by initing in reset
+		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan ##hopefully this still works by initing in reset
 
 		if self.plume_dict_list is not None:
 			self.plume_ind = self.rng.choice(self.plume_inds, p = self.plume_probs)

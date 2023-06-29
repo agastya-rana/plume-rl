@@ -21,7 +21,7 @@ class OdorPlumeFromMovie:
             _, frame = self.video_capture.read()
             frame = frame[:,:,2].T
             frame_shape = np.shape(frame)
-            self.loaded_movie = np.zeros((frame_shape[0], frame_shape[1], self.stop_frame-self.frame_number))
+            self.loaded_movie = np.zeros((frame_shape[0], frame_shape[1], self.stop_frame-self.start_frame))
             ## Load movie into memory
             for i in range(self.stop_frame-self.start_frame):
                 self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame+i)
