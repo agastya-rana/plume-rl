@@ -34,19 +34,24 @@ class FilterExtractor(BaseFeaturesExtractor):
         x = torch.cat((x, observations[:, -self.theta_dim:]), dim=1) ## Concatenate along the last dimension to get a tensor of shape (batch_size, n_heads*n_odor + theta_dim)
         return x
 
+def choose_env(config, rng):
+    goal_directed = True if ("GOAL_DIRECTED" in config["agent"] and config["agent"]["GOAL_DIRECTED"]) else False
+    int_timestep = True if ("INT_TIMESTEP" in config["agent"] and config["agent"]["INT_TIMESTEP"]) else False
+    if goal_directed:
+        assert not int_timestep, "Goal-directed navigation cannot be combined with integrated timestep yet"
+        environment = GoalDirectedNavigator(rng = rng, config = config)
+    elif int_timestep:
+        environment = HistoryTimestepNavigator(rng = rng, config = config)
+    else:
+        assert "HIST_LEN" in config["state"], "History length must be specified in config file"
+        environment = HistoryNavigator(rng = rng, config = config)
+    return environment
 
 def train_model(config):
     print(config)
     seed = int(sys.argv[1])
     rng = np.random.default_rng(seed)
-    try:
-        if config["agent"]["GOAL_DIRECTED"]:
-            environment = GoalDirectedNavigator(rng = rng, config = config)
-        else:
-            environment = HistoryTimestepNavigator(rng = rng, config = config) if config["agent"]["INT_TIMESTEP"] else HistoryNavigator(rng = rng, config = config)
-    except:
-        environment = HistoryTimestepNavigator(rng = rng, config = config) if config["agent"]["INT_TIMESTEP"] else HistoryNavigator(rng = rng, config = config)
-    print(hasattr(environment, 'seed'))
+    environment = choose_env(config, rng)
     store_config(config)
     training_dict = config['training']
     try:
@@ -62,7 +67,7 @@ def train_model(config):
 	exploration_final_eps = training_dict['MIN_EPSILON'], learning_rate=learning_rate, policy_kwargs=policy_kwargs, exploration_fraction=exploration_fraction,)
     model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'], tb_log_name=training_dict['MODEL_NAME'])
     # Save the model
-    model.save(os.path.join(config["output"]["SAVE_DIRECTORY"], training_dict['MODEL_NAME']))
+    model.save(os.path.join(config["training"]["SAVE_DIRECTORY"], training_dict['MODEL_NAME']))
     environment.close()
     ## Free up memory - hope this does the job
     environment.close()
@@ -71,21 +76,15 @@ def train_model(config):
     return model
 
 def test_model(config):
-    config["output"]["RECORD_SUCCESS"] = True
-    model = DQN.load(os.path.join(config["output"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
+    config["training"]["RECORD_SUCCESS"] = True
+    model = DQN.load(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
     rng = np.random.default_rng(seed=1)
-    try:
-        if config["agent"]["GOAL_DIRECTED"]:
-            render_env = GoalDirectedNavigator(rng = rng, config = config)
-        else:
-            render_env = HistoryTimestepNavigator(rng = rng, config = config) if config["agent"]["INT_TIMESTEP"] else HistoryNavigator(rng = rng, config = config)
-    except:
-        render_env = HistoryTimestepNavigator(rng = rng, config = config) if config["agent"]["INT_TIMESTEP"] else HistoryNavigator(rng = rng, config = config)
+    render_env = choose_env(config, rng)
     obs = render_env.reset()
     episode_no = 0
-    num_record = config["output"]["RECORD_STATE_ACTION"]
-    state_arr = np.empty((num_record, config["plume"]["STOP_FRAME"], render_env.obs_dim))
-    action_arr = np.empty((num_record, config["plume"]["STOP_FRAME"]))
+    num_record = config["training"]["RECORD_STATE_ACTION"]
+    state_arr = np.empty((num_record, config["plume"]["STOP_FRAME"]-config["plume"]["START_FRAME"], render_env.obs_dim))
+    action_arr = np.empty((num_record, config["plume"]["STOP_FRAME"]-config["plume"]["START_FRAME"]))
     while episode_no < config["training"]['TEST_EPISODES']:
         action = model.predict(obs, deterministic=True)[0]
         if episode_no < num_record:
@@ -100,11 +99,11 @@ def test_model(config):
             episode_no += 1
             if episode_no % 100 == 0:
                 print("Episode number: ", episode_no, flush=True)
-    np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_reward_history.npy"), np.array(render_env.all_episode_rewards))
-    np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_success_history.npy"), np.array(render_env.all_episode_success))
+    np.save(os.path.join(config["training"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_reward_history.npy"), np.array(render_env.all_episode_rewards))
+    np.save(os.path.join(config["training"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_success_history.npy"), np.array(render_env.all_episode_success))
     ## Save state and action arrays
-    np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_state_history.npy"), state_arr)
-    np.save(os.path.join(config["output"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_action_history.npy"), action_arr)
+    np.save(os.path.join(config["training"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_state_history.npy"), state_arr)
+    np.save(os.path.join(config["training"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_action_history.npy"), action_arr)
     print("Average reward: ", np.mean(render_env.all_episode_rewards))
     print("Average success: ", np.mean(render_env.all_episode_success))
     render_env.close()

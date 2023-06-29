@@ -1,168 +1,84 @@
+## This file has code to train the VAE assuming the optimal RNN is already trained.
+## I need to simulate the VAE training episodes while simulating the RNN so I can capture the history dependence;
+from torch.utils.data import DataLoader, TensorDataset
+from src.models.vae_arch import *
+import numpy as np
 import torch
-from torch import nn
-from torch.nn.utils import weight_norm
-import torch.nn.functional as F
-from rnn_baseline import *
-from vae_helper_classes import *
+import torch as th
+from sb3_contrib import RecurrentPPO
+from stable_baselines3.common.vec_env import VecEnv
 
-## Goal here is to construct a VAE that takes as input a set of odor statistics, and a history,
-## We use a TCN to encode temporal embeddings; then, we use a VAE on the output space to create our latent space.
-## TCN architecture explained in https://arxiv.org/pdf/1803.01271.pdf
+def get_training_data(gym_env, model, hist_len, n_steps=100000):
+    ## Environment must be vector environment
+    ## Init: make history vector that is fed as inputs
+    ## Make output vector that is action probabilities
+    ## Over x episodes,
+    ## 1. Reset environment,
+    ## 2. Get state and update history,
+    ## 3. Feed state to RNN and get action probabilities,
+    ## 4. Choose action deterministically (because RNNs were trained on deterministic action sequencing - we can play around with this),
+    ## 5. Save history and action probabilities as training data
+    ## 6. Step environment and loop
+    ## Note that the hist_len is the number of timesteps including the current timestep in the history
+    ## Ensure environment is a vector environment
+    assert isinstance(gym_env, VecEnv)
+    n_envs = gym_env.num_envs
+    training_input = np.zeros_like((n_steps, n_envs, (hist_len + 1) * gym_env.observation_space.shape[0]))
+    training_output = np.zeros_like((n_steps, n_envs, gym_env.action_space.n))
+    step_count = 0
+    states = gym_env.reset()
+    lstm_states = th.zeros((1, n_envs, model.policy.lstm_actor.hidden_size), device=model.policy.device))
+    #env = SubprocVecEnv([make_env(i, config) for i in range(training_dict["N_ENVS"])])
+    history = np.zeros((n_envs, hist_len + 1, gym_env.observation_space.shape[0]))
+    while step_count < n_steps:
+        if not np.all(episode_starts == False):
+            for i, start in enumerate(episode_starts):
+                if start:
+                    history[i] = np.zeros((hist_len + 1, gym_env.observation_space.shape[0]))
+                    history[i, 0] = states[i]
+        distribution, lstm_states = model.policy.get_distribution(th.from_numpy(states), lstm_states, th.from_numpy(episode_starts))
+        action_probs = distribution.distribution.probs
+        states, _, episode_starts, _ = gym_env.step(np.argmax(action_probs))
+        training_input[step_count] = history.reshape((n_envs, -1))
+        training_output[step_count] = action_probs
+        np.roll(history, 1, axis=1)
+        history[:, 0, :] = states
+        step_count += 1
+    training_input = training_input.reshape((n_steps * n_envs, -1))
+    training_output = training_output.reshape((n_steps * n_envs, -1))
+    return training_input, training_output
 
-## Instead of using TCNs and learning the latent space, we can simply take each odor measurement (for example a 3 element vector at each timestep)
-## and send it to a multi-head set of perceptrons that are all each only connected to one type of odor measurement
-## Then, we can treat these perceptrons as the latent space, learn the 'filters' (weights of each perceptron), and then see how they work
+def make_dataloader(VAE_input, VAE_output, batch_size):
+    ## Convert them to PyTorch tensors
+    VAE_input_tensor = torch.from_numpy(VAE_input).float()
+    VAE_output_tensor = torch.from_numpy(VAE_output).float()
+    # Create a TensorDataset and DataLoader
+    dataset = TensorDataset(VAE_input_tensor, VAE_output_tensor)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    return dataloader
 
-num_stats = 3 ## Concentration, motion, gradient
-history_dep = 0 ## number of timesteps of history incorporated
-input_dim = num_stats*(history_dep + 1)
-filter_len = 5
-hidden_layers = 3
-max_dilation = 2**hidden_layers
-padding = (filter_len - 1) * max_dilation
-
-## TODO: In running this, need to supply inputs in the format (features, time); this will be transposed in the code
-
-class LinearFilter_Encoder(nn.Module):
-    ## This class will have the first layer send each input timeseries to a separate neuron; this could be multiheaded?
-    ## We send these multi-headed filters to the through a hidden layer, and then to the latent space 
-    def __init__(self, hidden_size, latent_dim, n_features=3):
-        ## Input should be a tensor of size (n_features, n_timesteps)
-        super().__init__()
-        self.n_heads = n_heads
-        self.n_features = n_features
-        self.latent_dim = latent_dim
-        self.hidden_size = hidden_size
-        # Define the first layer with n_heads*n_features neurons that is a linear filter with offset
-        self.fc1 = nn.ModuleList([nn.Linear(n_timesteps, 1) for _ in range(n_heads*n_features)])
-        # Define the second layer as a fully connected feedforward network
-        self.fc2 = nn.Linear(n_heads*n_features, hidden_size)
-        # Define linear layers to output mu and logvar
-        self.fc_mu = nn.Linear(hidden_size, latent_dim)
-        self.fc_logvar = nn.Linear(hidden_size, latent_dim)
-
-    def forward(self, x):
-        x = x.view(self.n_features, -1)
-        x = [F.relu(fc(x[i%self.n_heads])) for i, fc in enumerate(self.fc1)]
-        x = torch.cat(x, dim=0)
-        # Apply the second layer
-        x = F.relu(self.fc2(x))
-        # Compute mu and logvar
-        mu = self.fc_mu(x)
-        logvar = self.fc_logvar(x)
-        return mu, logvar
-
-class TCN_MLP_Encoder(nn.Module):
-    def __init__(self, input_size, hidden_size, latent_size, num_layers, n_TCN_layer=5, kernel_size=5, dropout=0.2):
-        super().__init__()
-        self.num_layers = num_layers
-        self.fc_layers = nn.ModuleList([TCN(input_size, hidden_size, [hidden_size]*n_TCN_layer, kernel_size=kernel_size, dropout=dropout)])
-        self.fc_layers.extend([nn.Linear(hidden_size, hidden_size) for _ in range(num_layers - 1 - n_TCN_layer)])
-        self.fc_mu = nn.Linear(hidden_size, latent_size)
-        self.fc_logvar = nn.Linear(hidden_size, latent_size)
-
-    def forward(self, x):
-        for layer in self.fc_layers:
-            x = F.relu(layer(x))
-        mu = self.fc_mu(x)
-        logvar = self.fc_logvar(x)
-        return mu, logvar
-
-## Train it on the optimal policy chosen by the RNN actor-critic structure
-
-class Decoder(nn.Module):
-    def __init__(self, latent_size, hidden_size, output_size, num_layers):
-        super(Decoder, self).__init__()
-        self.num_layers = num_layers
-        self.fc_layers = nn.ModuleList([nn.Linear(latent_size, hidden_size)])
-        self.fc_layers.extend([nn.Linear(hidden_size, hidden_size) for _ in range(num_layers - 2)])
-        ## Convert to action space
-        self.fc_layers.append(nn.Linear(hidden_size, output_size))
-        self.fc_out = nn.Softmax()
-    def forward(self, x):
-        for layer in self.fc_layers:
-            x = F.relu(layer(x))
-        x = self.fc_out(x)
-        return x
-
-
-class VAE(nn.Module):
-    def __init__(self, encoder_kwargs, decoder_kwargs):
-        super(VAE, self).__init__()
-        self.encoder = None
-        self.decoder = None
-        self.kl_loss = nn.KLDivLoss(reduction="batchmean")
-
-    def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        z = mu + eps * std
-        return z
-
-    def forward(self, x):
-        mu, logvar = self.encoder(x)
-        z = self.reparameterize(mu, logvar)
-        reconstructed = self.decoder(z)
-        return reconstructed, mu, logvar
-
-class Filter_MLP_VAE(VAE):
-    def __init__(self, encoder_kwargs, decoder_kwargs):
-        super().__init__(encoder_kwargs, decoder_kwargs)
-        self.encoder = LinearFilter_Encoder(**encoder_kwargs)
-        self.decoder = Decoder(**decoder_kwargs)
-
-def VAE_loss_function(reconstructed, x, mu, logvar):
-    # Reconstruction loss (KL-divergence between expected action probs and optimal RNN policy)
-    reconstruction_loss = nn.KLDivLoss(reconstructed, policy_probs())
-    # Kullback-Leibler (KL) divergence loss
-    kl_divergence_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-    # Total loss
-    loss = reconstruction_loss + kl_divergence_loss
-    return loss
-
-# Example usage
-input_size = 32
-hidden_size = 64
-latent_size = 10
-
-# Instantiate the VAE model
-vae = VAE(input_size, hidden_size, latent_size)
-
-# Generate some random input data
-input_data = torch.randn(16, input_size)  # Batch size of 16
-
-# Forward pass through the VAE
-reconstructed_data, mu, logvar = vae(input_data)
-
-# Compute the loss
-loss = loss_function(reconstructed_data, input_data, mu, logvar)
-
-# Perform backpropagation
-optimizer = torch.optim.Adam(vae.parameters(), lr=0.001)
-optimizer.zero_grad()
-loss.backward()
-optimizer.step()
-
-
-
-# Example usage
-input_size = 32
-hidden_size = 64
-latent_size = 10
-num_layers_encoder = 2
-num_layers_decoder = 2
-# Instantiate the VAE model
-vae = VAE(input_size, hidden_size, latent_size, num_layers_encoder, num_layers_decoder)
-# Generate some random input data
-input_data = torch.randn(16, input_size)  # Batch size of 16
-# Example usage
-input_size = 32
-hidden_size = 64
-latent_size = 5
-# Instantiate the VAE model
-vae = VAE(input_size, hidden_size, latent_size)
-# Generate some random input data
-input_data = torch.randn(16, input_size)  # Batch size of 16
-# Forward pass through the VAE
-reconstructed_data, mu, logvar = vae(input_data)
-
+def train_vae(model, dataloader, optimizer, epochs):
+    """
+    Train a VAE model.
+    model: The VAE model.
+    dataloader: A PyTorch DataLoader supplying the training data.
+    optimizer: The optimizer to use for training.
+    epochs: The number of epochs to train for.
+    """
+    model.train()  # Set the model to training mode
+    for epoch in range(epochs):
+        for batch_idx, (data, target) in enumerate(dataloader):
+            # Move the data to the device (CPU or GPU)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            data, target = data.to(device), target.to(device)
+            # Reset the gradients
+            optimizer.zero_grad()
+            # Forward pass (encode, decode and generate sample)
+            reconstructed_batch, mu, logvar = model(data)
+            # Calculate loss
+            loss = VAE_loss(reconstructed_batch, data, mu, logvar)
+            # Backward pass
+            loss.backward()
+            # Perform a single optimization step
+            optimizer.step()
+        print(f'Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}')

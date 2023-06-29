@@ -8,9 +8,9 @@ class FlySpatialParameters():
 		agent_dict = config['agent']
 		self.turn_ang_spd = agent_dict['TURN_ANG_SPEED_RAD_PER_S'] ## Turning speed in radians per second
 		self.walk_spd = agent_dict['WALK_SPEED_MM_PER_S'] ## Walking speed in mm per second
-		self.dt = agent_dict['DELTA_T_S'] ## Time step in seconds. 
-		self.walk_step_size = self.walk_spd*self.dt ## Distance traveled in one time step
-		self.ang_step_size = self.turn_ang_spd*self.dt ## Angle turned in one time step
+		self.dt = None ## Time step in seconds. 
+		self.walk_step_size = None ## Distance traveled in one time step
+		self.ang_step_size = None ## Angle turned in one time step
 
 	def update_params(self, action):
 		## Update the fly's position and heading angle based on the action taken

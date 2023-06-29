@@ -11,7 +11,7 @@ def print_dict(d, indent=0):
 
 ## Functions to store and load the config dict as pickle file
 def store_config(config):
-    with open(os.path.join(config["output"]["SAVE_DIRECTORY"], f'{config["training"]["MODEL_NAME"]}_config.pkl'), 'wb') as f:
+    with open(os.path.join(config["training"]["SAVE_DIRECTORY"], f'{config["training"]["MODEL_NAME"]}_config.pkl'), 'wb') as f:
         pickle.dump(config, f, pickle.HIGHEST_PROTOCOL)
 
 def load_config(model_name, save_dir):

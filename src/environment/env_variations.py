@@ -8,13 +8,16 @@ import gym
 from src.environment.gym_environment_class import FlyNavigator
 from gym.spaces import Box, Discrete, MultiDiscrete
 import copy
+from src.environment.fly_spatial_parameters_multi_video import FlySpatialParametersMultiVideo
+from src.environment.odor_plumes import *
+from src.environment.odor_senses_multi_video import *
 
 class IntegratedTimestepsNavigator(FlyNavigator):
 	def __init__(self, rng, config):
 		# integrated_dt=0.1, features_filter_type='exp', features_filter_size=5,
 		super().__init__(rng, config)
-		self.integrated_dt = config["agent"]["INTEGRATED_DT"]
-		self.features_filter_size = config["agent"]["FEATURES_FILTER_SIZE"]
+		self.integrated_dt = config["agent"]["INTEGRATED_DT_S"]
+		self.features_filter_size = config["agent"]["FEATURES_FILTER_SIZE_S"]
 		self.advance_timesteps = int(self.integrated_dt/self.dt) ## This should be an exact multiple
 		assert self.advance_timesteps*self.dt == self.integrated_dt
 		self.filtered_obs = np.zeros((self.num_odor_obs,))
@@ -72,7 +75,7 @@ class IntegratedTimestepsNavigator(FlyNavigator):
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, 
 			pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame) ## Update the odor features at initalized fly location
-		self.filtered_obs += 1/self.features_filter_size*(odor_obs - self.filtered_obs)
+		self.filtered_obs += self.dt/self.features_filter_size*(odor_obs - self.filtered_obs)
 		self.all_obs[:self.num_odor_obs] = self.filtered_obs
 		self._add_theta_observation()
 
@@ -145,7 +148,7 @@ class HistoryTimestepNavigator(IntegratedTimestepsNavigator):
 	
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame)
-		self.filtered_obs += 1/self.features_filter_size*(odor_obs - self.filtered_obs)
+		self.filtered_obs += self.dt/self.features_filter_size*(odor_obs - self.filtered_obs)
 		self.all_obs[:self.num_odor_obs] = self.filtered_obs
 		self.all_obs[self.num_odor_obs:-self.theta_dim] = self.history.flatten()
 		self._add_theta_observation()
@@ -162,15 +165,15 @@ class GoalDirectedNavigator(FlyNavigator):
 		super().__init__(rng, config)
 		self.action_space = Box(low=-1, high=1, shape=(2,))
 		goal_params = config["agent"]["GOAL_PARAMS"]
-		self.certainty = goal_params["CERTAINTY"] ## 0 if agent is precise, otherwise this is the constant use to scale random decisions; good val is 0.3
+		self.certainty = goal_params["CERTAINTY"] if "CERTAINTY" in goal_params else 0 ## 0 if agent is precise, otherwise this is the constant use to scale random decisions; good val is 0.3
 		self.straight_tol = goal_params["STRAIGHT_TOL"] ## Tolerance for theta difference between goal and current direction; good val is probably 0.3 (radians)
-		self.goal_access = goal_params["GOAL_ACCESS"] ## Whether the agent has access to the goal direction
+		self.goal_access = goal_params["GOAL_ACCESS"] if "GOAL_ACCESS" in goal_params else True
+		
 		state_dict = config["state"]
 		if self.goal_access:
 			## Need to now change the observation space and related stuff to account for this
 			if self.discrete_obs:
-				assert self.certainty == 0, "Goal direction has no magnitude for dicrete agent"
-				assert self.odor_features.can_discretize, "Set of features used does not have discretization capability"
+				assert self.certainty == 0, "Goal direction has no magnitude for discrete agent"
 				self.theta_discretization = state_dict['THETA_DISCRETIZATION']
 				all_obs_inds = copy.deepcopy(self.odor_features.discretization_index)
 				all_obs_inds.append(self.theta_discretization) #note that for discretized states it doesn't make sense to split into sin and cos so this assumes only 1 theta observable

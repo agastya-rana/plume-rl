@@ -15,7 +15,7 @@ class PlumeSummary(object):
         self.plume = OdorPlumeFromMovie(config, load=False)
         self.feats = feats
         self.n_stats = len(feats)
-        self.feat_bounds = [[0, 255], [-255, 255], [-255*255, 255*255]]
+        self.feat_bounds = [[0, 1], [-1, 1], [-1, 1]]
         self.ax1_bins = np.array(ax1_bins) ## Could be r or x
         self.ax2_bins = np.array(ax2_bins) ## Could be theta or y
         self.n_points = n_points
@@ -120,9 +120,9 @@ class PlumeSummary(object):
     def _compute_stats(self):
         ## Compute the statistics of the plume given the mean left and right sensor values
         ## current_stats has shape (n_points, n_stats)
-        self.current_stats[:, 0] = (self.mean_left_sensor + self.mean_right_sensor)/2 ## concentration
-        self.current_stats[:, 1] = self.mean_left_sensor - self.mean_right_sensor ## gradient
-        self.current_stats[:, 2] = self.prev_left_sensor*self.mean_right_sensor - self.prev_right_sensor*self.mean_left_sensor ## hrc
+        self.current_stats[:, 0] = (self.mean_left_sensor + self.mean_right_sensor)/(2*255) ## concentration
+        self.current_stats[:, 1] = (self.mean_left_sensor - self.mean_right_sensor)/255 ## gradient
+        self.current_stats[:, 2] = (self.prev_left_sensor*self.mean_right_sensor - self.prev_right_sensor*self.mean_left_sensor)/(255**2) ## hrc
     
     def _populate_counts(self):
         for i in range(len(self.ax1_bins)-1):
@@ -140,6 +140,10 @@ class PlumeSummary(object):
                         ## Remove the NaNs
                         stat = stats[:, k]
                         stat = stat[~np.isnan(stat)]
+                        if k == 2:
+                            print("Length:", len(stat), flush=True)
+                            print(stat)
+                            print(np.histogram(stat, bins=self.stat_bins[k], density=True)[0])
                         self.marginals[i, j, k, :] = np.histogram(stat, bins=self.stat_bins[k], density=True)[0]
                 else:
                     self.counts[i, j], self.marginals[i, j] = self._bin_stats(stats)
@@ -177,6 +181,7 @@ class PlumeSummary(object):
                         k = len(self.ax2_bins)-k1-2
                         # Create a subplot at the specified position
                         dist = self.marginals[j, k][i]
+                        print(dist, i)
                         axes[k1, j].bar(self.stat_bins[i][:-1], dist, width=self.stat_bins[i][1]-self.stat_bins[i][0], align='edge', label=f"({bin_centers_1[j]:.2f}, {bin_centers_2[k]:.2f})")
                         axes[k1, j].legend()
                         axes[k1, j].set_yscale('log')

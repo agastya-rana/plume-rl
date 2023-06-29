@@ -7,11 +7,11 @@ class OdorPlumeFromMovie:
         plume_dict = config['plume']
         self.movie_path = plume_dict['MOVIE_PATH']
         self.reset_frame_range = plume_dict['RESET_FRAME_RANGE']
-        self.frame_number = plume_dict['MIN_FRAME']
-        self.start_frame = plume_dict['MIN_FRAME']
+        self.start_frame = plume_dict['START_FRAME'] if 'START_FRAME' in plume_dict else 0
         self.stop_frame = plume_dict['STOP_FRAME']
-        self.px_threshold = plume_dict['PX_THRESHOLD']
-        self.px_per_mm = plume_dict['PX_PER_MM']
+        self.px_threshold = plume_dict['PX_THRESHOLD'] if 'PX_THRESHOLD' in plume_dict else 0
+        self.mm_per_px = plume_dict['MM_PER_PX']
+        self.max_conc = plume_dict['MAX_CONCENTRATION'] if 'MAX_CONCENTRATION' in plume_dict else 255
         self.video_capture = cv2.VideoCapture(self.movie_path)
         self.fps = self.video_capture.get(cv2.CAP_PROP_FPS) ## Gets the FPS
         self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame) ## Sets the frame number to the frame number of the first frame
@@ -56,7 +56,8 @@ class OdorPlumeFromMovie:
         ## 2 is the red channel
         ## Transpose the frame so that the first axis is the longer axis, and the second axis is the y axis
         frame = frame[:, :, 2].T
-        frame[frame<self.px_threshold]=0 #because off plume seems to all be 1 and we want it to be 0
+        frame[frame<self.px_threshold] = 0 #because off plume seems to all be 1 and we want it to be 0
+        frame = frame/self.max_conc
         return frame
     
     def pick_random_frame(self, rng, delay=10):
@@ -69,13 +70,13 @@ class OdorPlumeFromMovie:
     def nearest_odor_location(self, pos):
         ## Given pos = (x, y) in mm. Returns the nearest odor location (point in frame greater than threshold) in mm
         ## Convert pos to px
-        pos_px = (pos*self.px_per_mm).astype(int)
+        pos_px = (pos/self.mm_per_px).astype(int)
         ## Get odor locations in (x,y) px format
         odor_locations = np.argwhere(self.frame > self.px_threshold) ## Returns a list of (x,y) px coordinates np array of shape (n,2)
         ## Get the nearest odor location
         nearest_odor_location_px = odor_locations[np.argmin(np.linalg.norm(odor_locations-pos_px, axis=1))]
         ## Convert to mm
-        nearest_odor_location_mm = nearest_odor_location_px/self.px_per_mm
+        nearest_odor_location_mm = nearest_odor_location_px*self.mm_per_px
         return nearest_odor_location_mm
 
 class StaticGaussianRibbon(OdorPlumeFromMovie):
