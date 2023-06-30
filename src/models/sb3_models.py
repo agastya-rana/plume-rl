@@ -21,67 +21,135 @@ class SB3Model():
         self.env_class = config["training"]["ENV_CLASS"]
     
     def make_env(self):
-        if self.model_class == RecurrentPPO:
+        if self.model_class == "RecurrentPPO":
             n_envs = self.config["training"]["N_ENVS"] if "N_ENVS" in self.config["training"] else 1
             return VecMonitor(SubprocVecEnv([self.env_class(self.rng, self.config) for i in range(n_envs)]))
         else:
             return self.env_class(self.rng, self.config)
     
-    ## change log interval here too
     def train(self):
         environment = self.make_env()
         store_config(self.config)
-        training_dict = config['training']
         config = self.config
+        training_dict = config['training']
         callback_model = config['training']['CALLBACK'] if 'CALLBACK' in config['training'] else None
         if callback_model is not None:
             assert config["training"]["RECORD_SUCCESS"] == True, "If using a callback, RECORD_SUCCESS must be set to True"
             callback = callback_model(config)
+    
         ## Train based on the model class
-        if self.model_class == RecurrentPPO:
-            model = self.model_class("MlpPolicy", environment, verbose=1, n_steps=training_dict["N_STEPS"], batch_size=training_dict["N_STEPS"]*training_dict["N_ENVS"], 
-            policy_kwargs={"lstm_hidden_size": training_dict['LSTM_HIDDEN_SIZE'], "net_arch": training_dict['ACTOR_CRITIC_LAYERS']},
-            gamma=training_dict['GAMMA'], gae_lambda=training_dict['GAE_LAMBDA'], clip_range=training_dict['CLIP_RANGE'], vf_coef=training_dict['VF_COEF'], ent_coef=training_dict['ENT_COEF'],
-            tensorboard_log=training_dict['TB_LOG'], learning_rate=training_dict['LEARNING_RATE'])
-            # Train the model
-            model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'], tb_log_name=training_dict['MODEL_NAME'], callback=callback)
-        
-        elif self.model_class == PPO:
-            arch = [training_dict['N_HIDDEN_UNITS']]*training_dict['N_HIDDEN_LAYERS']
-            policy_kwargs={"net_arch": {"pi": arch, "vf": arch}}
-            if training_dict['FEATURES_EXTRACTOR_CLASS'] is not None:
-                policy_kwargs['features_extractor_class'] = training_dict['FEATURES_EXTRACTOR_CLASS']
-                policy_kwargs['features_extractor_kwargs'] = { "n_odor": len(config['state']["FEATURES"]), "n_heads": training_dict['N_HEADS'], "history_len": config["state"]['HIST_LEN'], "theta_dim": environment.theta_dim}
-            learning_rate = stable_baselines3.common.utils.get_linear_fn(start = training_dict['MAX_ALPHA'], end = training_dict['MIN_ALPHA'], end_fraction = training_dict['LEARNING_END_FRACTION'])
-            model = self.model_class("MlpPolicy", environment, verbose = 1, tensorboard_log=training_dict["TB_LOG"], gamma = training_dict['GAMMA'], 
-            n_steps=training_dict["N_STEPS"], batch_size=training_dict["N_STEPS"]*training_dict["N_ENVS"], n_epochs=training_dict["N_EPOCHS"],
-            gae_lambda=training_dict['GAE_LAMBDA'], clip_range=training_dict['CLIP_RANGE'], vf_coef=training_dict['VF_COEF'], ent_coef=training_dict['ENT_COEF'],
-            learning_rate=learning_rate, policy_kwargs=policy_kwargs,)
-            model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'], tb_log_name=training_dict['MODEL_NAME'], callback=callback)
-        
-        elif self.model_class == DQN:
-            exploration_fraction = training_dict['EXPLORATION_FRACTION'] if 'EXPLORATION_FRACTION' in training_dict else 0.1
-            policy_kwargs = {"net_arch": [training_dict['N_HIDDEN_UNITS']]*training_dict['N_HIDDEN_LAYERS']}        
-            if training_dict['FEATURES_EXTRACTOR_CLASS'] is not None:
-                policy_kwargs['features_extractor_class'] = training_dict['FEATURES_EXTRACTOR_CLASS']
-                policy_kwargs['features_extractor_kwargs'] = { "n_odor": len(config['state']["FEATURES"]), "n_heads": training_dict['N_HEADS'], "history_len": config["state"]['HIST_LEN'], "theta_dim": environment.theta_dim}
-            
-            learning_rate = stable_baselines3.common.utils.get_linear_fn(start = training_dict['MAX_ALPHA'], end = training_dict['MIN_ALPHA'], end_fraction = training_dict['LEARNING_END_FRACTION'])
-            
-            model = self.model_class("MlpPolicy", environment, verbose = 1, tensorboard_log=training_dict["TB_LOG"], gamma = training_dict['GAMMA'], 
-            exploration_final_eps = training_dict['MIN_EPSILON'], learning_rate=learning_rate, policy_kwargs=policy_kwargs, exploration_fraction=exploration_fraction, 
-            target_update_interval=training_dict['TARGET_UPDATE_INTERVAL'],)
-            model.learn(total_timesteps=training_dict['N_EPISODES']*training_dict['MAX_EPISODE_LENGTH'], tb_log_name=training_dict['MODEL_NAME'], callback=callback)
-            
+        if self.model_class == 'RecurrentPPO':
+            model = self.make_RNN_model(environment)        
+        elif self.model_class == 'PPO':
+            model = self.make_PPO_model(environment)
+        elif self.model_class == 'DQN':
+            model = self.make_DQN_model(environment)            
         else:
             raise NotImplementedError
-            
+        
+        log_interval = training_dict.get('LOG_INTERVAL', 10)
+        ## Train the model
+        model.learn(total_timesteps=training_dict['TRAIN_TIMESTEPS'], tb_log_name=training_dict['MODEL_NAME'], callback=callback, log_interval=log_interval)
         # Save the model
         model.save(os.path.join(config["training"]["SAVE_DIRECTORY"], training_dict['MODEL_NAME']))
         ## Free up memory - hope this does the job
         environment.close()
         del environment        
         return model
+
+    def make_RNN_model(self, environment):
+        config = self.config
+        training_dict = config['training']
+        gamma = training_dict.get('GAMMA', 1)
+        vf_coef = training_dict.get('VF_COEF', 0.5)
+        ent_coef = training_dict.get('ENT_COEF', 0.01)
+        clip_range = training_dict.get('CLIP_RANGE', 0.2)
+        gae_lambda = training_dict.get('GAE_LAMBDA', 0.95)
+        n_steps = training_dict.get('N_STEPS', 2048)
+        n_epochs = training_dict.get('N_EPOCHS', 10)
+        if 'N_HIDDEN_UNITS' in training_dict and 'N_HIDDEN_LAYERS' in training_dict:
+            arch = [training_dict['N_HIDDEN_UNITS']]*training_dict['N_HIDDEN_LAYERS']
+        elif 'ACTOR_CRITIC_LAYERS' in training_dict:
+            arch = training_dict['ACTOR_CRITIC_LAYERS']
+        else:
+            arch = [64, 64]
+        
+        policy_kwargs = {"lstm_hidden_size": training_dict['LSTM_HIDDEN_SIZE'], "net_arch": arch}
+        policy_kwargs = self._add_feature_extractor_policy(policy_kwargs, config, environment)
+
+        model = RecurrentPPO("MlpPolicy", environment, verbose=1, n_steps=n_steps, batch_size=n_steps*training_dict["N_ENVS"], 
+        policy_kwargs=policy_kwargs,
+        gamma=gamma, gae_lambda=gae_lambda, clip_range=clip_range, vf_coef=vf_coef, ent_coef=ent_coef,
+        tensorboard_log=training_dict['TB_LOG'], learning_rate=training_dict['LEARNING_RATE'])
+        return model
+
+    def make_PPO_model(self, environment):
+        config = self.config
+        training_dict = config['training']
+        gamma = training_dict.get('GAMMA', 1)
+        vf_coef = training_dict.get('VF_COEF', 0.5)
+        ent_coef = training_dict.get('ENT_COEF', 0.01)
+        clip_range = training_dict.get('CLIP_RANGE', 0.2)
+        gae_lambda = training_dict.get('GAE_LAMBDA', 0.95)
+        n_steps = training_dict.get('N_STEPS', 2048)
+        n_epochs = training_dict.get('N_EPOCHS', 10)
+
+        if 'N_HIDDEN_UNITS' in training_dict and 'N_HIDDEN_LAYERS' in training_dict:
+            arch = [training_dict['N_HIDDEN_UNITS']]*training_dict['N_HIDDEN_LAYERS']
+        elif 'ACTOR_CRITIC_LAYERS' in training_dict:
+            arch = training_dict['ACTOR_CRITIC_LAYERS']
+        else:
+            arch = [64, 64]
+        
+        policy_kwargs={"net_arch": {"pi": arch, "vf": arch}}
+        policy_kwargs = self._add_feature_extractor_policy(policy_kwargs, config, environment)
+
+        learning_rate = self._get_learning_rate(training_dict)
+
+        model = PPO("MlpPolicy", environment, verbose = 1, tensorboard_log=training_dict["TB_LOG"], gamma = gamma, n_steps=n_steps, batch_size=n_steps*training_dict["N_ENVS"], n_epochs=n_epochs,
+        gae_lambda=gae_lambda, clip_range=clip_range, vf_coef=vf_coef, ent_coef=ent_coef, learning_rate=learning_rate, policy_kwargs=policy_kwargs,)
+        return model
+
+    def make_DQN_model(self, environment):
+        config = self.config
+        training_dict = config['training']
+        exploration_fraction = training_dict.get('EXPLORATION_FRACTION', 0.1)
+        gamma = training_dict.get('GAMMA', 1)
+        min_epsilon = training_dict.get('MIN_EPSILON', 0.01)
+        target_update_interval = training_dict.get('TARGET_UPDATE_INTERVAL', 10000)
+
+        if 'N_HIDDEN_UNITS' in training_dict and 'N_HIDDEN_LAYERS' in training_dict:
+            arch = [training_dict['N_HIDDEN_UNITS']]*training_dict['N_HIDDEN_LAYERS']
+        elif 'ACTOR_CRITIC_LAYERS' in training_dict:
+            arch = training_dict['ACTOR_CRITIC_LAYERS']
+        else:
+            arch = [64, 64]
+        
+        policy_kwargs={"net_arch": arch}
+        policy_kwargs = self._add_feature_extractor_policy(policy_kwargs, config, environment)
+        
+        learning_rate = self._get_learning_rate(training_dict)
+        
+        model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=training_dict["TB_LOG"], gamma = gamma, 
+        exploration_final_eps = min_epsilon, learning_rate=learning_rate, policy_kwargs=policy_kwargs, exploration_fraction=exploration_fraction, 
+        target_update_interval=target_update_interval,)
+        return model
+
+    @staticmethod
+    def _add_feature_extractor_policy(policy_kwargs, config, environment):
+        training_dict = config['training']
+        if training_dict['FEATURES_EXTRACTOR_CLASS'] is not None:
+            policy_kwargs['features_extractor_class'] = training_dict['FEATURES_EXTRACTOR_CLASS']
+            policy_kwargs['features_extractor_kwargs'] = { "n_odor": len(config['state']["FEATURES"]), "n_heads": training_dict['N_HEADS'], "history_len": config["state"]['HIST_LEN'], "theta_dim": environment.theta_dim}
+        return policy_kwargs
+
+    @staticmethod
+    def _get_learning_rate(training_dict):
+        min_alpha = training_dict.get('MIN_ALPHA', 0.0001)
+        max_alpha = training_dict.get('MAX_ALPHA', min_alpha)
+        learning_end_fraction = training_dict.get('LEARNING_END_FRACTION', 0.1)
+        learning_rate = stable_baselines3.common.utils.get_linear_fn(start=max_alpha, end=min_alpha, end_fraction=learning_end_fraction)
+        return learning_rate
 
     @staticmethod
     def _get_action_space_dim(env):
@@ -98,14 +166,25 @@ class SB3Model():
         ## Reset max x to default
         if 'INITIAL_MAX_RESET_X_MM' in config['plume']:
             del config['plume']['INITIAL_MAX_RESET_X_MM']
-        elif 'PLUME_DICT_LIST' in config['plume']:
+        if 'PLUME_DICT_LIST' in config['plume']:
+            max_frames = 0
             for plume_dict in config['plume']['PLUME_DICT_LIST']:
+                max_frames = max(max_frames, plume_dict['STOP_FRAME'])
                 if 'INITIAL_MAX_RESET_X_MM' in plume_dict:
                     del plume_dict['INITIAL_MAX_RESET_X_MM']
-        model = self.model_class.load(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
-        test_env = FlyNavigator(self.rng, config)
+        else:
+            max_frames = config['plume']['STOP_FRAME']
+        
+        ## Load the model
+        if self.model_class == "RecurrentPPO":
+            model = RecurrentPPO.load(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
+        elif self.model_class == "PPO":
+            model = PPO.load(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
+        elif self.model_class == "DQN":
+            model = DQN.load(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
+        test_env = self.env_class(self.rng, config)
         obs = test_env.reset()
-        if self.model_class == RecurrentPPO:
+        if self.model_class == "RecurrentPPO":
             # cell and hidden state of the LSTM
             lstm_states = None
             # Episode start signal
@@ -114,12 +193,12 @@ class SB3Model():
         episode_no = 0
         num_record = config["training"]["RECORD_STATE_ACTION"]
         num_render = config["training"]["RECORD_RENDER"] if "RECORD_RENDER" in config["training"] else 10
-        state_arr = np.empty((num_record, config["plume"]["STOP_FRAME"], test_env.obs_dim))
-        action_arr = np.empty((num_record, config["plume"]["STOP_FRAME"],) + _get_action_space_dim(test_env))
+        state_arr = np.empty((num_record, max_frames, test_env.obs_dim))
+        action_arr = np.empty((num_record, max_frames,) + _get_action_space_dim(test_env))
 
         ## Run the test
         while episode_no < config["training"]['TEST_EPISODES']:
-            if self.model_class == RecurrentPPO:
+            if self.model_class == "RecurrentPPO":
                 action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
             else:
                 action, _ = model.predict(obs, deterministic=True)
@@ -137,7 +216,7 @@ class SB3Model():
                 episode_start = True
                 if episode_no % 100 == 0:
                     print("Episode ", episode_no)
-            elif self.model_class == RecurrentPPO:
+            elif self.model_class == "RecurrentPPO":
                 episode_start = False
         
         ## Save reward and success histories

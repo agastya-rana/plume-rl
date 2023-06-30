@@ -94,10 +94,10 @@ training_dict = {
     "MIN_EPSILON": 0.05,
     "LEARNING_END_FRACTION": 1/5,
 
-    ## Network architecture
+    ## Network architecture; required
     "N_HIDDEN_UNITS": 32, ## number of hidden units in MLP layers
     "N_HIDDEN_LAYERS": 3, ## number of hidden layers in MLP
-    "FEATURES_EXTRACTOR_CLASS": None, ## class of features extractor
+    "FEATURES_EXTRACTOR_CLASS": None, ## class of features extractor; optional; default None
 
 }
 
