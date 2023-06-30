@@ -87,7 +87,7 @@ def test_model(config):
     episode_no = 0
     num_record = config["training"]["RECORD_STATE_ACTION"]
     state_arr = np.empty((num_record, config["plume"]["STOP_FRAME"], render_env.obs_dim))
-    action_arr = np.empty((num_record, config["plume"]["STOP_FRAME"], render_env.action_space.shape))
+    action_arr = np.empty((num_record, config["plume"]["STOP_FRAME"],)+ render_env.action_space.shape)
     while episode_no < config["training"]['TEST_EPISODES']:
         action = model.predict(obs, deterministic=True)[0]
         if episode_no < num_record:

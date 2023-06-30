@@ -1,5 +1,29 @@
 from torch import nn
 from torch.nn.utils import weight_norm
+import torch.nn.functional as F
+import torch
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+
+class FilterExtractor(BaseFeaturesExtractor):
+    def __init__(self, observation_space, n_heads=3, n_odor=1, history_len=10, theta_dim=2):
+        self.n_odor = n_odor
+        self.n_heads = n_heads
+        features_dim = n_heads*n_odor + theta_dim ## The features dimension is the number of neurons in the first layer + the number of theta values
+        self.theta_dim = theta_dim
+        self.history_len = history_len + 1 ## + 1 because the current timestep is also included for easier manipulation in the forward method
+        super().__init__(observation_space, features_dim)
+        # Define the first layer with n_heads*n_odor neurons that is a linear filter with offset
+        self.filter = nn.ModuleList([nn.Linear(self.history_len, 1) for _ in range(n_heads*n_odor)])
+
+    def forward(self, observations):
+        ## Remove the theta values from the observations
+        x = observations[:, :-self.theta_dim]
+        x = x.view(-1, self.history_len, self.n_odor) ## Reshape to (batch_size, history_len, n_odor)
+        x = [F.relu(fc(x[:, :, i // self.n_heads])) for i, fc in enumerate(self.filter)] ## List of tensors of shape (batch_size, 1)
+        x = torch.cat(x, dim=1) ## Concatenate along the last dimension to get a tensor of shape (batch_size, n_heads*n_odor)
+        ## Add back the theta values to x and return
+        x = torch.cat((x, observations[:, -self.theta_dim:]), dim=1) ## Concatenate along the last dimension to get a tensor of shape (batch_size, n_heads*n_odor + theta_dim)
+        return x
 
 ## Deletes extra padding on the right-side (future padding is not needed, since TCNs are causal)
 class Chomp1d(nn.Module):
