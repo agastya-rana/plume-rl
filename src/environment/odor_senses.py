@@ -121,38 +121,38 @@ class OdorFeatures():
 			self.mean_right_odor = self.mean_right_odor*(self.mean_right_odor>self.detection_threshold)
 		self.concentration = (self.mean_left_odor + self.mean_right_odor)/2
 
-	def get_conc_left(self, normalize=False):
+	def get_conc_left(self):
 		return self.mean_left_odor
 	
-	def get_conc_right(self, normalize=False):
+	def get_conc_right(self):
 		return self.mean_right_odor
 	
-	def get_conc(self, normalize=False):
+	def get_conc(self):
 		return (self.mean_left_odor + self.mean_right_odor)/2
 	
-	def get_grad(self, normalize=False):
+	def get_grad(self):
 		return self.mean_left_odor - self.mean_right_odor
 
-	def get_hrc(self, normalize=False):
+	def get_hrc(self):
 		return self.left_odor_prev*self.mean_right_odor - self.right_odor_prev*self.mean_left_odor
 	
-	def get_intermittency(self, normalize=False):
+	def get_intermittency(self):
 		assert self.tau is not None, "tau must be set to use intermittency feature."
 		self.intermittency += 1/self.tau*(self.odor_bin-self.intermittency)*self.dt
 		return self.intermittency
 
-	def get_t_L(self, normalize=False):
+	def get_t_L(self):
 		return (self.t_now - self.t_whiff)/self.max_t_L
 	
-	def get_conc_disc(self, normalize=False):
+	def get_conc_disc(self):
 		return int(self.concentration > self.detection_threshold)
 	
-	def get_grad_disc(self, normalize=False):
+	def get_grad_disc(self):
 		left_disc = int(self.mean_left_odor > self.detection_threshold)
 		right_disc = int(self.mean_right_odor > self.detection_threshold)
 		return left_disc - right_disc + 1
 
-	def get_hrc_disc(self, normalize=False):
+	def get_hrc_disc(self):
 		left_disc = int(self.mean_left_odor > self.detection_threshold)
 		right_disc = int(self.mean_right_odor > self.detection_threshold)
 		left_disc_prev = int(self.left_odor_prev > self.detection_threshold)
@@ -170,14 +170,14 @@ class OdorFeatures():
 	def get_features(self):
 		self.update_bins()
 		self.update_whiff()
-		feats = np.array([self.func_evals[i](normalize=self.normalize) for i in range(len(self.func_evals))])
+		feats = np.array([self.func_evals[i]() for i in range(len(self.func_evals))])
 		self.update_hist()
 		return feats	
 	
 	def update_bins(self):
-		if self.threshold_style == 'fixed':
+		if self.threshold_type == 'fixed':
 			self.odor_bin = self.concentration > self.detection_threshold
-		elif self.threshold_style == 'adaptive':
+		elif self.threshold_type == 'adaptive':
 			self.adaptation += self.dt/self.threshold_adaptation_timescale*(self.concentration-self.adaptation)
 			self.threshold = np.maximum(self.detection_threshold, self.adaptation)
 			self.odor_bin = self.concentration > self.threshold

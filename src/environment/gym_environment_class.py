@@ -34,7 +34,7 @@ class FlyNavigator(Env):
 		if 'PLUME_DICT_LIST' in plume_dict:
 			self.plume_dict_list = plume_dict['PLUME_DICT_LIST']
 			self.plume_list = []
-			for plume_config in plume_dict_list:
+			for plume_config in self.plume_dict_list:
 				if 'PLUME_TYPE' not in plume_config or plume_config['PLUME_TYPE'] == 'movie':
 					make_plume_config = {'plume': plume_config} ## backwards compatibility
 					self.plume_list.append(OdorPlumeFromMovie(make_plume_config))
@@ -173,10 +173,6 @@ class FlyNavigator(Env):
 		self.reached_source = False
 		self.done = False
 
-		## Reset render variables
-		self.trajectory_number = 0
-		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan ##hopefully this still works by initing in reset
-
 		if self.plume_dict_list is not None:
 			self.plume_ind = self.rng.choice(self.plume_inds, p = self.plume_probs)
 			self.all_plume_inds.append(self.plume_ind)
@@ -184,6 +180,10 @@ class FlyNavigator(Env):
 			current_plume_dict = self.plume_dict_list[self.plume_ind]
 			self._init_plume_variables(current_plume_dict)
 		
+		## Reset render variables
+		self.trajectory_number = 0
+		self.fly_trajectory = np.zeros((self.max_frames, 2)) + np.nan ##hopefully this still works by initing in reset
+
 		## Reset odor plumes and turning distributions
 		flip = self.rng.choice([True, False])
 		self.odor_plume.reset(flip = flip, rng = self.rng)
@@ -194,9 +194,6 @@ class FlyNavigator(Env):
 		odor_on = self.odor_plume.frame > self.detection_threshold
 		odor_on_indices = np.transpose(odor_on.nonzero())
 		valid_locations = odor_on_indices*self.mm_per_px
-		## TODO: delete soon
-		print(self.odor_plume.frame, odor_on_indices, valid_locations)
-
 
 		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
 			max_reset_x = np.min([self.max_reset_x, int(self.episode_incrementer/self.shift_episodes)*self.reset_x_shift+self.initial_max_reset_x])
@@ -289,7 +286,7 @@ class FlyNavigator(Env):
 			reward = self.source_reward
 			return reward
 		if self.wall_penalty: #for giving penalty for hitting walls
-			outside = (pos[0] > self.wall_max_x) + (pos[0] < self.wall_min_x) + (pos[1] > self.wall_max_y) + (pos[1] < self.wall_min_y) #checking if out of bounds
+			outside = (pos[0] > self.max_wall_x) + (pos[0] < self.min_wall_x) + (pos[1] > self.max_wall_y) + (pos[1] < self.min_wall_y) #checking if out of bounds
 			if outside:
 				reward = self.wall_penalty
 				self.done = True

@@ -207,7 +207,7 @@ class GoalDirectedNavigator(FlyNavigator):
 		goal_mag = np.linalg.norm(action)
 		goal_vec = action/goal_mag
 		goal_theta = np.arctan2(goal_vec[1], goal_vec[0])
-		self._add_goal_obs(goal_theta)
+		self._add_goal_obs(goal_vec)
 		## Find the difference between the goal direction and the current direction
 		theta_diff = goal_theta - self.fly_spatial_parameters.theta
 		## Wrap the difference to be between -pi and pi
