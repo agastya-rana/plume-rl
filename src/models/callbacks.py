@@ -1,4 +1,6 @@
 import os
+from stable_baselines3.common.callbacks import BaseCallback
+
 
 class LogSuccessSaveModel(BaseCallback):
 
@@ -8,8 +10,8 @@ class LogSuccessSaveModel(BaseCallback):
 		self.log_freq = config["training"]["LOG_FREQ"] ## around 400K steps
 		self.success_history = []
 		self.save_dir = os.path.join(config["training"]["SAVE_DIRECTORY"], training_dict['MODEL_NAME'])
-
-    def _on_step(self):
+	
+	def _on_step(self):
 		if self.n_calls % self.save_freq == 0:
 			## Save the model
 			model.save(self.save_dir)
