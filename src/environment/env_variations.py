@@ -236,3 +236,18 @@ class GoalDirectedNavigator(FlyNavigator):
 				self.all_obs[-2] = val - 1 ## -1 needed because digitize calls fist bin as bin 1 instead of bin 0
 			else:
 				self.all_obs[-2] = goal_theta
+	
+	def _get_goal_obs(self):
+		if self.use_cos_and_sin:
+			return np.array([self.all_obs[-4], self.all_obs[-3]])
+		else:
+			raise NotImplementedError
+
+class GoalDirectedIncrementalNavigator(GoalDirectedNavigator):
+
+	def __init__(self, rng, config):
+		super().__init__(rng, config)
+
+	def step(self, action):
+		action = np.array(action) + self._get_goal_obs()
+		return super().step(action)
