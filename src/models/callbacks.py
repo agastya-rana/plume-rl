@@ -1,6 +1,7 @@
 import os
 from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
+from stable_baselines3.common.vec_env import VecEnv
 
 class LogSuccessSaveModel(BaseCallback):
 
@@ -14,15 +15,28 @@ class LogSuccessSaveModel(BaseCallback):
 	def _on_step(self):
 		if self.n_calls % self.save_freq == 0:
 			## Save the model
-			model.save(self.save_dir)
+			self.model.save(self.save_dir)
 			print("Model saved at step ", self.n_calls/1000000, "M")
 		if self.n_calls % self.log_freq == 0:
 			## Save the success percentage to TB logger
-			current_success = np.mean(self.success_history[-self.log_freq:])
+			## Check if training_env is vectorized or not
+			if isinstance(self.training_env, VecEnv):
+				successes = self.training_env.get_attr("all_episode_success")
+				all_successes = []
+				n_env = len(successes)
+				for i in range(n_env):
+					all_successes += successes[i][-self.log_freq:]
+				try:
+					current_success = np.mean(all_successes[-self.log_freq*n_env:])
+				except:
+					current_success = np.mean(all_successes)
+					print("Error in calculating success percentage")
+			else:
+				current_success = np.mean(self.training_env.all_episode_success[-self.log_freq:])
 			self.logger.record('success', current_success)
 			## Save model if it is best
-			if current_success > np.max(self.success_history):
-				model.save(self.save_dir+"_best")
+			if len(self.success_history) == 0 or current_success > np.max(self.success_history):
+				self.model.save(self.save_dir+"_best")
 			## Save the success percentage to success_history
 			self.success_history.append(current_success)
 		return True
