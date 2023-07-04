@@ -19,7 +19,7 @@ class FilterExtractor(BaseFeaturesExtractor):
         ## Remove the theta values from the observations
         x = observations[:, :-self.theta_dim]
         x = x.view(-1, self.history_len, self.n_odor) ## Reshape to (batch_size, history_len, n_odor)
-        x = [F.relu(fc(x[:, :, i // self.n_heads])) for i, fc in enumerate(self.filter)] ## List of tensors of shape (batch_size, 1)
+        x = [fc(x[:, :, i // self.n_heads]) for i, fc in enumerate(self.filter)] ## List of tensors of shape (batch_size, 1)
         x = torch.cat(x, dim=1) ## Concatenate along the last dimension to get a tensor of shape (batch_size, n_heads*n_odor)
         ## Add back the theta values to x and return
         x = torch.cat((x, observations[:, -self.theta_dim:]), dim=1) ## Concatenate along the last dimension to get a tensor of shape (batch_size, n_heads*n_odor + theta_dim)
