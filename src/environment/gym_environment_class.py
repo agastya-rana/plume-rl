@@ -118,6 +118,9 @@ class FlyNavigator(Env):
 		self.radial_conc_gating = reward_dict['RADIAL_CONC_GATING'] if 'RADIAL_CONC_GATING' in reward_dict else 0
 		self.stray_reward = reward_dict['STRAY_REWARD'] if 'STRAY_REWARD' in reward_dict else 0
 		self.wall_penalty = reward_dict['WALL_PENALTY'] if 'WALL_PENALTY' in reward_dict else 0
+		self.centerline_reward = reward_dict["CENTERLINE_REWARD"] if "CENTERLINE_REWARD" in reward_dict else 0
+		self.reward_annealing = reward_dict['REWARD_ANNEALING'] if 'REWARD_ANNEALING' in reward_dict else 0 ## fraction to reduce reward by each episode
+		self.reward_scale_factor = 1
 		
 		## Misc
 		self.rng = rng
@@ -137,6 +140,7 @@ class FlyNavigator(Env):
 		mm_per_px = plume_dict['MM_PER_PX']
 		self.mm_per_px = mm_per_px
 		self.odor_features.mm_per_px = mm_per_px
+		self.source_location = plume_dict['SOURCE_LOCATION_MM']
 
 		self.odor_features.max_t_L = self.dt*(plume_dict['STOP_FRAME']-plume_dict['START_FRAME'])
 
@@ -146,7 +150,6 @@ class FlyNavigator(Env):
 
 		## Set episode termination features
 		self.max_frames = plume_dict['STOP_FRAME']
-		self.source_location = plume_dict['SOURCE_LOCATION_MM']
 		
 		## Define reset parameters
 		(self.min_reset_x, self.max_reset_x), (self.min_reset_y, self.max_reset_y) = plume_dict["RESET_BOX_MM"]
@@ -195,6 +198,9 @@ class FlyNavigator(Env):
 		odor_on_indices = np.transpose(odor_on.nonzero())
 		valid_locations = odor_on_indices*self.mm_per_px
 
+		## Change the reward scale factor
+		self.reward_scale_factor = np.max(1 - self.episode_incrementer*self.reward_annealing, 0)
+
 		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
 			max_reset_x = np.min([self.max_reset_x, int(self.episode_incrementer/self.shift_episodes)*self.reset_x_shift+self.initial_max_reset_x])
 			self.x_random_bounds = np.array([self.min_reset_x, max_reset_x])
@@ -205,6 +211,7 @@ class FlyNavigator(Env):
 		self.odor_features.clear() ## Clear the odor features
 		self._update_state() ## Update the state
 		self.previous_distance = np.linalg.norm(self.fly_spatial_parameters.position-self.source_location)
+		self.previous_location = copy.deepcopy(self.fly_spatial_parameters.position)
 		return self.all_obs
 
 	def _update_state(self):
@@ -323,8 +330,14 @@ class FlyNavigator(Env):
 			nearest_odor_loc = self.odor_plume.nearest_odor_location(pos)
 			nearest_odor_dist = np.linalg.norm(pos - nearest_odor_loc)
 			reward += self.stray_reward*nearest_odor_dist
+		
+		if self.centerline_reward:
+			# Get the current distance from the centerline
+			centerline_dist = np.abs(self.fly_spatial_parameters.position[1] - self.source_location[1])
+			reward += self.centerline_reward*(centerline_dist-np.abs(self.previous_location[1] - self.source_location[1]))
+			self.previous_location = copy.deepcopy(self.fly_spatial_parameters.position)
 	
-		return reward
+		return reward*self.reward_scale_factor
 
 	def draw_pointer(self, ax, position, angle, length=1.0, color='red'):
 		# Calculate the vertices of the triangle
