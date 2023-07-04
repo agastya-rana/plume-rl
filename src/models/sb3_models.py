@@ -1,7 +1,3 @@
-
-import torch.nn as nn
-import torch.nn.functional as F
-import torch
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3 import DQN, PPO
 from sb3_contrib import RecurrentPPO
@@ -10,8 +6,7 @@ from src.models.callbacks import *
 import stable_baselines3
 import numpy as np
 import os
-import sys
-import gym.spaces as spaces
+import gym.spaces
 
 class SB3Model():
     def __init__(self, config, rng):
@@ -19,16 +14,13 @@ class SB3Model():
         self.rng = rng
         self.model_class = config["training"]["MODEL_CLASS"]
         self.env_class = config["training"]["ENV_CLASS"]
-    
-    def make_env(self):
-        if self.model_class == "RecurrentPPO":
-            n_envs = self.config["training"]["N_ENVS"] if "N_ENVS" in self.config["training"] else 1
-            return VecMonitor(SubprocVecEnv([self.env_class(self.rng, self.config) for i in range(n_envs)]))
-        else:
-            return self.env_class(self.rng, self.config)
-    
+
     def train(self):
-        environment = self.make_env()
+        if self.model_class == "RecurrentPPO" or self.model_class == "PPO":
+            n_envs = self.config["training"]["N_ENVS"] if "N_ENVS" in self.config["training"] else 1
+            environment = VecMonitor(SubprocVecEnv([(lambda: self.env_class(self.rng, self.config)) for i in range(n_envs)]))
+        else:
+            environment = self.env_class(self.rng, self.config)
         store_config(self.config)
         config = self.config
         training_dict = config['training']
@@ -43,7 +35,7 @@ class SB3Model():
         elif self.model_class == 'PPO':
             model = self.make_PPO_model(environment)
         elif self.model_class == 'DQN':
-            model = self.make_DQN_model(environment)            
+            model = self.make_DQN_model(environment)
         else:
             raise NotImplementedError
         
@@ -54,7 +46,7 @@ class SB3Model():
         model.save(os.path.join(config["training"]["SAVE_DIRECTORY"], training_dict['MODEL_NAME']))
         ## Free up memory - hope this does the job
         environment.close()
-        del environment        
+        del environment  
         return model
 
     def make_RNN_model(self, environment):
@@ -76,11 +68,12 @@ class SB3Model():
         
         policy_kwargs = {"lstm_hidden_size": training_dict['LSTM_HIDDEN_SIZE'], "net_arch": arch}
         policy_kwargs = self._add_feature_extractor_policy(policy_kwargs, config, environment)
+        learning_rate = self._get_learning_rate(training_dict)
 
-        model = RecurrentPPO("MlpPolicy", environment, verbose=1, n_steps=n_steps, batch_size=n_steps*training_dict["N_ENVS"], 
+        model = RecurrentPPO("MlpLstmPolicy", environment, verbose=1, n_steps=n_steps, batch_size=n_steps*training_dict["N_ENVS"], 
         policy_kwargs=policy_kwargs,
         gamma=gamma, gae_lambda=gae_lambda, clip_range=clip_range, vf_coef=vf_coef, ent_coef=ent_coef,
-        tensorboard_log=training_dict['TB_LOG'], learning_rate=training_dict['LEARNING_RATE'])
+        tensorboard_log=training_dict['TB_LOG'], learning_rate=learning_rate, n_epochs=n_epochs)
         return model
 
     def make_PPO_model(self, environment):
@@ -140,7 +133,9 @@ class SB3Model():
         training_dict = config['training']
         if training_dict['FEATURES_EXTRACTOR_CLASS'] is not None:
             policy_kwargs['features_extractor_class'] = training_dict['FEATURES_EXTRACTOR_CLASS']
-            policy_kwargs['features_extractor_kwargs'] = { "n_odor": len(config['state']["FEATURES"]), "n_heads": training_dict['N_HEADS'], "history_len": config["state"]['HIST_LEN'], "theta_dim": environment.theta_dim}
+            use_sin_cos = config["state"]['USE_COSINE_AND_SIN_THETA'] if 'USE_COSINE_AND_SIN_THETA' in config["state"] else True
+            theta_dim = 2 if use_sin_cos else 1
+            policy_kwargs['features_extractor_kwargs'] = { "n_odor": len(config['state']["FEATURES"]), "n_heads": training_dict['N_HEADS'], "history_len": config["state"]['HIST_LEN'], "theta_dim": theta_dim}
         return policy_kwargs
 
     @staticmethod
@@ -160,7 +155,7 @@ class SB3Model():
         else:
             raise NotImplementedError
     
-    def test_model():
+    def test(self):
         config = self.config
         config["training"]["RECORD_SUCCESS"] = True
         ## Reset max x to default
@@ -194,7 +189,7 @@ class SB3Model():
         num_record = config["training"]["RECORD_STATE_ACTION"]
         num_render = config["training"]["RECORD_RENDER"] if "RECORD_RENDER" in config["training"] else 10
         state_arr = np.empty((num_record, max_frames, test_env.obs_dim))
-        action_arr = np.empty((num_record, max_frames,) + _get_action_space_dim(test_env))
+        action_arr = np.empty((num_record, max_frames,) + self._get_action_space_dim(test_env))
 
         ## Run the test
         while episode_no < config["training"]['TEST_EPISODES']:
@@ -227,5 +222,7 @@ class SB3Model():
         np.save(os.path.join(config["training"]["SAVE_DIRECTORY"],config["training"]["MODEL_NAME"]+"_action_history.npy"), action_arr)
         print("Average reward: ", np.mean(test_env.all_episode_rewards))
         print("Average success: ", np.mean(test_env.all_episode_success))
+        r, s = test_env.all_episode_rewards, test_env.all_episode_success
         test_env.close()
-        
+        del test_env
+        return r, s
