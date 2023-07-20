@@ -64,7 +64,7 @@ class FlyNavigator(Env):
 		self.excess_turn_dur = agent_dict['EXCESS_TURN_DUR_S'] ## Scale parameter for the exponential distribution of turn durations
 		self.antenna_height = agent_dict['ANTENNA_LENGTH_MM']
 		self.antenna_width = agent_dict['ANTENNA_WIDTH_MM']
-		self.detection_threshold = state_dict['DETECTION_THRESHOLD'] if 'DETECTION_THRESHOLD' in state_dict else None
+		self.detection_threshold = state_dict['DETECTION_THRESHOLD'] if 'DETECTION_THRESHOLD' in state_dict else 0
 		self.detection_threshold_type = state_dict['DETECTION_THRESHOLD_TYPE'] if 'DETECTION_THRESHOLD_TYPE' in state_dict else "fixed"
 
 		## If only single plume movie, then initialize here since reset method will not call init_plume_variables
@@ -201,7 +201,7 @@ class FlyNavigator(Env):
 		## Change the reward scale factor
 		self.reward_scale_factor = np.max(1 - self.episode_incrementer*self.reward_annealing, 0)
 
-		if (self.episode_incrementer > 0) & (self.episode_incrementer % self.shift_episodes == 0):
+		if (self.episode_incrementer > 0) and (self.shift_episodes != 0) and (self.episode_incrementer % self.shift_episodes == 0):
 			max_reset_x = np.min([self.max_reset_x, int(self.episode_incrementer/self.shift_episodes)*self.reset_x_shift+self.initial_max_reset_x])
 			self.x_random_bounds = np.array([self.min_reset_x, max_reset_x])
 		self.fly_spatial_parameters.randomize_parameters(rng=self.rng, x_bounds=self.x_random_bounds, y_bounds=self.y_random_bounds, 
@@ -334,7 +334,8 @@ class FlyNavigator(Env):
 		if self.centerline_reward:
 			# Get the current distance from the centerline
 			centerline_dist = np.abs(self.fly_spatial_parameters.position[1] - self.source_location[1])
-			reward += self.centerline_reward*(centerline_dist-np.abs(self.previous_location[1] - self.source_location[1]))
+			prev_centerline_dist = np.abs(self.previous_location[1] - self.source_location[1])
+			reward += self.centerline_reward*(prev_centerline_dist-centerline_dist)
 			self.previous_location = copy.deepcopy(self.fly_spatial_parameters.position)
 	
 		return reward*self.reward_scale_factor

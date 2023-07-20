@@ -243,11 +243,57 @@ class GoalDirectedNavigator(FlyNavigator):
 		else:
 			raise NotImplementedError
 
+
+class GoalDirectedHistoryNavigator(GoalDirectedNavigator):
+	def __init__(self, rng, config):
+		super().__init__(rng, config)
+		assert self.use_cos_and_sin, "history navigator only works with cos and sin theta"
+		self.theta_dim = 2
+		self.history_len = config["state"]["HIST_LEN"] ## note that this doesn't include the current observation
+		self.store_goal_angles = config["agent"]["GOAL_PARAMS"]["STORE_GOAL_ANGLES"]
+		## In the following, I am leaving self.observables (names of observed features) unchanged; hopefully this doesn't mess up any other functions that call this
+		if self.store_goal_angles:
+			self.history = np.zeros((self.history_len, self.num_odor_obs+2))
+			self.obs_dim = (self.num_odor_obs+self.theta_dim)*(self.history_len+1) + self.theta_dim ## store the goal angle history as well, but not orientation history
+		else:
+			self.history = np.zeros((self.history_len, self.num_odor_obs))
+			self.obs_dim = (self.num_odor_obs)*(self.history_len+1)+ self.theta_dim + self.theta_dim
+		if self.discrete_obs:
+			assert not self.store_goal_angles, "history goal navigator with discrete obs only works without history of goal angles"
+			all_obs_inds = copy.deepcopy(self.odor_features.discretization_index)*(self.history_len+1)
+			all_obs_inds.append(self.theta_discretization) #note that for discretized states it doesn't make sense to split into sin and cos so this assumes only 1 theta observable
+			all_obs_inds.append(self.theta_discretization) ## repeated twice for goal direction and theta
+			self.observation_space = MultiDiscrete(all_obs_inds)
+		else:
+			if self.store_goal_angles:
+				self.observable_bounds = np.vstack((self.odor_features.feat_bounds,np.array([-1, 1]), np.array([-1, 1]))*(self.history_len+1) +  (np.array([[-1, 1], [-1, 1]]),))	
+			else:
+				self.observable_bounds = np.vstack((self.odor_features.feat_bounds,)*(self.history_len+1) +  (np.array([[-1, 1], [-1, 1]]),) +  (np.array([[-1, 1], [-1, 1]]),))	
+			self.observation_space = Box(low=self.observable_bounds[:, 0], high=self.observable_bounds[:, 1])
+		## We use convention where most recent observation is first in the array (see _update_state)
+		self.all_obs = np.zeros(self.obs_dim).astype(int) if self.discrete_obs else np.zeros(self.obs_dim).astype('float32') ## Initialize all observables to 0
+	
+	def step(self, action):
+		## Step the environment with the given action
+		## Add the current observation to the history, and remove the oldest observation
+		self.history = np.roll(self.history, 1)
+		if self.store_goal_angles:
+			self.history[0, :] = np.concatenate((self.all_obs[:self.num_odor_obs], self._get_goal_obs()))
+		else:
+			self.history[0, :] = self.all_obs[:self.num_odor_obs]
+		return super().step(action)
+	
+	def _update_state(self):
+		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame) ## Update the odor features at initalized fly location
+		self.all_obs[:self.num_odor_obs+self.theta_dim] = np.concatenate((odor_obs, self._get_goal_obs()))
+		self.all_obs[self.num_odor_obs+self.theta_dim:-self.theta_dim] = self.history.flatten()
+		self._add_theta_observation()
+
 class GoalDirectedIncrementalNavigator(GoalDirectedNavigator):
 
 	def __init__(self, rng, config):
 		super().__init__(rng, config)
 
 	def step(self, action):
-		action = np.array(action) + self._get_goal_obs()
+		action = np.array(action)*0.1 + self._get_goal_obs()
 		return super().step(action)

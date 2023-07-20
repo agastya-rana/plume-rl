@@ -27,7 +27,8 @@ class OdorFeatures():
 		state_dict = config['state']
 		self.dt = None ## Set by reset depending on plume used
 		self.features = state_dict['FEATURES']
-		if state_dict["DISCRETE_OBSERVABLES"]:
+		self.discrete_observables = state_dict['DISCRETE_OBSERVABLES'] if "DISCRETE_OBSERVABLES" in state_dict else False
+		if self.discrete_observables:
 			assert set(self.features).issubset(set(['conc_disc', 'grad_disc', 'hrc_disc'])), "Can only discretize concentration, gradient, and hrc"
 		
 		## Initialize base threshold
