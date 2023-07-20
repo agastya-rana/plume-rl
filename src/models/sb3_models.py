@@ -5,6 +5,7 @@ from src.environment.utilities import *
 from src.models.callbacks import *
 import stable_baselines3
 import numpy as np
+import time
 import os
 import gym.spaces
 
@@ -14,8 +15,9 @@ class SB3Model():
         self.rng = rng
         self.model_class = config["training"]["MODEL_CLASS"]
         self.env_class = config["training"]["ENV_CLASS"]
+        self.model = None
 
-    def train(self):
+    def train(self, model_path=None):
         if self.model_class == "RecurrentPPO" or self.model_class == "PPO":
             n_envs = self.config["training"]["N_ENVS"] if "N_ENVS" in self.config["training"] else 1
             environment = VecMonitor(SubprocVecEnv([(lambda: self.env_class(self.rng, self.config)) for i in range(n_envs)]))
@@ -28,26 +30,42 @@ class SB3Model():
         if callback_model is not None:
             assert config["training"]["RECORD_SUCCESS"] == True, "If using a callback, RECORD_SUCCESS must be set to True"
             callback = callback_model(config)
-    
-        ## Train based on the model class
-        if self.model_class == 'RecurrentPPO':
-            model = self.make_RNN_model(environment)        
-        elif self.model_class == 'PPO':
-            model = self.make_PPO_model(environment)
-        elif self.model_class == 'DQN':
-            model = self.make_DQN_model(environment)
+
+        if model_path is None:
+            ## Train based on the model class
+            if self.model_class == 'RecurrentPPO':
+                model = self.make_RNN_model(environment)
+            elif self.model_class == 'PPO':
+                model = self.make_PPO_model(environment)
+            elif self.model_class == 'DQN':
+                model = self.make_DQN_model(environment)
+            else:
+                raise NotImplementedError
         else:
-            raise NotImplementedError
+            print("Loading existing model")
+            model = self.load_model(model_path, environment)
         
         log_interval = training_dict.get('LOG_INTERVAL', 10)
         ## Train the model
         model.learn(total_timesteps=training_dict['TRAIN_TIMESTEPS'], tb_log_name=training_dict['MODEL_NAME'], callback=callback, log_interval=log_interval)
         # Save the model
         model.save(os.path.join(config["training"]["SAVE_DIRECTORY"], training_dict['MODEL_NAME']))
-        ## Free up memory - hope this does the job
-        environment.close()
-        del environment  
+        print("Model saved", flush=True)
+        self.model = model
+        print("Training complete", flush=True)
+        return None
+
+    def load_model(self, model_path, environment=None):
+        if self.model_class == 'RecurrentPPO':
+            model = RecurrentPPO.load(model_path, env=environment)
+        elif self.model_class == 'PPO':
+            model = PPO.load(model_path, env=environment)
+        elif self.model_class == 'DQN':
+            model = DQN.load(model_path, env=environment)
+        else:
+            raise NotImplementedError
         return model
+        
 
     def make_RNN_model(self, environment):
         config = self.config
@@ -147,15 +165,87 @@ class SB3Model():
         return learning_rate
 
     @staticmethod
-    def _get_action_space_dim(env):
-        if isinstance(env.action_space, gym.spaces.Box):
-            return env.action_space.shape
-        elif isinstance(env.action_space, gym.spaces.Discrete):
+    def _get_action_space_dim(action_space):
+        if isinstance(action_space, gym.spaces.Box):
+            return action_space.shape
+        elif isinstance(action_space, gym.spaces.Discrete):
             return (1,)
         else:
             raise NotImplementedError
     
-    def test(self):
+    def _find_max_max_frames(self):
+        config = self.config
+        if 'PLUME_DICT_LIST' in config['plume']:
+            max_frames = 0
+            for plume_dict in config['plume']['PLUME_DICT_LIST']:
+                max_frames = max(max_frames, plume_dict['STOP_FRAME'])
+        else:
+            max_frames = config['plume']['STOP_FRAME']
+        return max_frames
+
+    def test(self, best=False):
+        print("Testing", flush=True)
+        config = self.config
+        save_path = os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME'])
+        ## Don't need to reset max x reset since this would be annealed during training
+        ## Load the model
+        if self.model is None:
+            print("Loading model for testing since it was not loaded before", flush=True)
+            if best:
+                self.model = self.load_model(save_path + '_best')
+            else:
+                self.model = self.load_model(save_path)
+        else:
+            print("Using model that was loaded before", flush=True)
+            model = self.model
+        
+        ## Is the problem that the model also stores the environment?
+        print("Model loaded successfully; starting test")
+        ## Initialize relevant arrays
+        episode_no = 0
+        num_render = config["training"]["RENDER_TIMESTEPS"] if "RENDER_TIMESTEPS" in config["training"] else 10000
+        total_timesteps = config["training"]['TEST_TIMESTEPS']
+        record_steps = config["training"]['RECORD_TIMESTEPS'] if 'RECORD_TIMESTEPS' in config["training"] else total_timesteps
+        
+        env = model.get_env()
+        num_envs = env.num_envs
+        state_arr = np.empty((num_envs, record_steps, env.get_attr("obs_dim")[0]))
+        action_arr = np.empty((num_envs, record_steps,) + self._get_action_space_dim(env.action_space))
+        reward_arr = np.empty((num_envs, record_steps))
+        state = None
+        dones = np.ones((num_envs,), dtype=bool)
+        timestep = 0
+        ## Run the test
+        print(time.time(), flush=True)
+        obs = env.reset()
+        while timestep < total_timesteps:
+            action, state = self.model.predict(obs, state=state, episode_start=dones, deterministic=True)
+            obs, rewards, dones, info = env.step(action)
+            if timestep < record_steps:
+                state_arr[:, timestep, :] = obs
+                action_arr[:, timestep, :] = action
+                reward_arr[:, timestep] = rewards
+            if timestep < num_render:
+                env.render()
+            timestep += 1
+            if timestep % 1000 == 0:
+                print("Timestep: ", timestep, flush=True)
+        print(time.time(), flush=True)
+        all_episode_rewards = np.array(env.get_attr("all_episode_rewards"))
+        all_episode_success = np.array(env.get_attr("all_episode_success"))
+        ## Save reward and success histories
+        np.save(save_path + "_reward_history.npy", all_episode_rewards)
+        np.save(save_path + "_success_history.npy", all_episode_success)
+        np.save(save_path + "_state_history.npy", state_arr)
+        np.save(save_path + "_action_history.npy", action_arr)
+        ## Save state and action arrays
+        print("Average reward: ", np.mean(all_episode_rewards))
+        print("Average success: ", np.mean(all_episode_success))
+        env.close()
+        return all_episode_rewards, all_episode_success
+    
+    def test_new_env(self, best=False):
+        print("Testing", flush=True)
         config = self.config
         config["training"]["RECORD_SUCCESS"] = True
         ## Reset max x to default
@@ -171,12 +261,19 @@ class SB3Model():
             max_frames = config['plume']['STOP_FRAME']
         
         ## Load the model
-        if self.model_class == "RecurrentPPO":
-            model = RecurrentPPO.load(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
-        elif self.model_class == "PPO":
-            model = PPO.load(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
-        elif self.model_class == "DQN":
-            model = DQN.load(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
+        if self.model is None:
+            print("Loading model for testing since it was not loaded before", flush=True)
+            if best:
+                self.model = self.load_model(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME'] + '_best'))
+            else:
+                self.model = self.load_model(os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME']))
+        else:
+            print("Using model that was loaded before", flush=True)
+            model = self.model
+        
+        ## Is the problem that the model also stores the environment?
+        print("Model loaded successfully; starting test")
+        ## Change this to work with VecEnv...
         test_env = self.env_class(self.rng, config)
         obs = test_env.reset()
         if self.model_class == "RecurrentPPO":
@@ -194,9 +291,9 @@ class SB3Model():
         ## Run the test
         while episode_no < config["training"]['TEST_EPISODES']:
             if self.model_class == "RecurrentPPO":
-                action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
+                action, lstm_states = self.model.predict(obs, state=lstm_states, episode_start=episode_start, deterministic=True)
             else:
-                action, _ = model.predict(obs, deterministic=True)
+                action, _ = self.model.predict(obs, deterministic=True)
             if episode_no < num_record:
                 ## Store state and action
                 state_arr[episode_no, test_env.odor_plume.frame_number, :] = obs

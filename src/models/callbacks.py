@@ -11,8 +11,16 @@ class LogSuccessSaveModel(BaseCallback):
 		self.log_freq = config["training"]["LOG_FREQ"] ## around 400K steps
 		self.success_history = []
 		self.save_dir = os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME'])
-	
+		self.init_flag = False
+
 	def _on_step(self):
+		if not self.init_flag:
+			self.init_flag = True
+			if isinstance(self.training_env, VecEnv):
+				self.n_envs = self.training_env.num_envs
+				self.success_last_idx = [0]*self.n_envs
+			else:
+				self.success_last_idx = 0
 		if self.n_calls % self.save_freq == 0:
 			## Save the model
 			self.model.save(self.save_dir)
@@ -23,16 +31,13 @@ class LogSuccessSaveModel(BaseCallback):
 			if isinstance(self.training_env, VecEnv):
 				successes = self.training_env.get_attr("all_episode_success")
 				all_successes = []
-				n_env = len(successes)
-				for i in range(n_env):
-					all_successes += successes[i][-self.log_freq:]
-				try:
-					current_success = np.mean(all_successes[-self.log_freq*n_env:])
-				except:
-					current_success = np.mean(all_successes)
-					print("Error in calculating success percentage")
+				for i in range(self.n_envs):
+					all_successes += successes[i][self.success_last_idx[i]:]
+					self.success_last_idx[i] = len(successes[i])
+				current_success = np.mean(all_successes)
 			else:
-				current_success = np.mean(self.training_env.all_episode_success[-self.log_freq:])
+				current_success = np.mean(self.training_env.all_episode_success[self.success_last_idx:])
+				self.success_last_idx = len(self.training_env.all_episode_success)
 			self.logger.record('success', current_success)
 			## Save model if it is best
 			if len(self.success_history) == 0 or current_success > np.max(self.success_history):
