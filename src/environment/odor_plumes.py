@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+from src.packets.packet_environment import packets
+import copy
 
 class OdorPlumeFromMovie:
     def __init__(self, config, load=True):
@@ -113,3 +115,48 @@ class StaticGaussianRibbon(OdorPlumeFromMovie):
 
         return
 
+class SimulatedPacketPlume():
+	def __init__(self, config):
+		plume_dict = config['plume']
+		self.packet_dict = plume_dict['PACKET_DICT']
+		self.plume_setup = packets(**self.packet_dict)
+		self.stop_frame = plume_dict['STOP_FRAME']
+		#self.packet_pos_list = []
+		#self.packet_size_list = []
+		self.frame_list = [] #a frame is gonna be an N by 3 matrix. First two columns are packet x and y. Last column is packet size.
+		self.flipped_frame_list = []
+		self.frame_number = 0
+		self.flip = False
+		self.reset_frame_range = plume_dict['RESET_FRAME_RANGE']
+
+
+		for _ in range(0, self.stop_frame):
+			packet_pos, packet_sizes = self.plume_setup.evolve_packets()
+			num_packets = len(packet_sizes)
+			frame = np.zeros((num_packets, 3))
+			frame[:,0:2] = packet_pos
+			frame[:,2] = packet_sizes
+			self.frame_list.append(frame)
+			ys = frame[:,1]
+			flipped_ys = 2*self.plume_setup.source_y - ys
+			flipped_frame = copy.deepcopy(frame)
+			flipped_frame[:,1] = flipped_ys
+			self.flipped_frame_list.append(flipped_frame)
+
+	def advance(self, rng):
+
+		if self.flip:
+			self.frame = self.flipped_frame_list[self.frame_number]
+		else:
+			self.frame = self.frame_list[self.frame_number]
+
+		self.frame_number +=1
+	
+	def reset(self, flip, rng):
+        #assert type(rng) == np.random.Generator
+		self.frame_number = rng.integers(low=self.reset_frame_range[0], high=self.reset_frame_range[1],size=1).item()
+		self.flip = flip
+		if self.flip:
+			self.frame = self.flipped_frame_list[self.frame_number]
+		else:
+			self.frame = self.frame_list[self.frame_number]

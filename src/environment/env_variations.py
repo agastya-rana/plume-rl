@@ -107,6 +107,11 @@ class HistoryNavigator(FlyNavigator):
 		self.history[0, :] = self.all_obs[:self.num_odor_obs]
 		return super().step(action)
 	
+	## TODO: Add history reset method
+	def reset(self):
+		self.history = np.zeros((self.history_len, self.num_odor_obs))
+		return super().reset()
+
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, 
 			pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame) ## Update the odor features at initalized fly location
@@ -143,6 +148,10 @@ class HistoryTimestepNavigator(IntegratedTimestepsNavigator):
 		self.history = np.roll(self.history, 1)
 		self.history[0, :] = self.all_obs[:self.num_odor_obs]
 		return super().step(action)
+	
+	def reset(self):
+		self.history = np.zeros((self.history_len, self.num_odor_obs))
+		return super().reset()
 	
 	def _update_state(self):
 		odor_obs = self.odor_features.update(theta = self.fly_spatial_parameters.theta, pos = self.fly_spatial_parameters.position, odor_frame = self.odor_plume.frame)

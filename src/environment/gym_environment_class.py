@@ -41,6 +41,9 @@ class FlyNavigator(Env):
 				elif plume_config['PLUME_TYPE'] == 'ribbon':
 					make_plume_config = {'plume': plume_config} ## just for backwards compatibility for now
 					self.plume_list.append(StaticGaussianRibbon(make_plume_config))
+				elif plume_config['PLUME_TYPE'] == 'packet_simulation':
+					test_config = {'plume':plume_config}
+					self.plume_list.append(SimulatedPacketPlume(test_config))
 			## Set plume probabilities; default is uniform
 			self.plume_probs = plume_dict['PLUME_PROBS'] if 'PLUME_PROBS' in plume_dict else np.ones(len(self.plume_list))/len(self.plume_list)
 			self.plume_inds = np.arange(len(self.plume_probs)) ## list of plume indices that gets sampled from with plume probs 
@@ -55,7 +58,10 @@ class FlyNavigator(Env):
 			else:
 				raise ValueError("Plume type not recognized")
 
-		self.odor_features = OdorFeatures(config) ## Defines the odor features the fly senses.
+		if 'ODOR_FEATURES' in state_dict:
+			self.odor_features = state_dict["ODOR_FEATURES"](config) ## Defines the odor features the fly senses.
+		else:
+			self.odor_features = OdorFeatures(config) ## Defines the odor features the fly senses.
 		self.fly_spatial_parameters = FlySpatialParameters(config) ## True (x,y,theta)
 
 		## Define agent parameters
@@ -141,12 +147,16 @@ class FlyNavigator(Env):
 		self.mm_per_px = mm_per_px
 		self.odor_features.mm_per_px = mm_per_px
 		self.source_location = plume_dict['SOURCE_LOCATION_MM']
-
-		self.odor_features.max_t_L = self.dt*(plume_dict['STOP_FRAME']-plume_dict['START_FRAME'])
+		self.odor_features.plume_type = plume_dict['PLUME_TYPE']
+		if plume_dict['PLUME_TYPE'] == 'packet_simulation':
+			self.odor_features.init_intensity = plume_dict['INIT_INTENSITY']
+			assert 'WALL_BOX_MM' in plume_dict, "WALL_BOX_MM must be specified for boundary of packet sim flies"
+			(self.odor_features.min_wall_x, self.odor_features.max_wall_x), (self.odor_features.min_wall_y, self.odor_features.max_wall_y) = plume_dict["WALL_BOX_MM"]
 
 		## Set up odor features box
 		self.odor_features.std_left_box, self.odor_features.std_right_box = self.odor_features.make_L_R_std_box(self.mm_per_px, self.antenna_height, self.antenna_width)
 		self.odor_features.num_pts = np.shape(self.odor_features.std_left_box)[0]
+		self.odor_features.plume_type = plume_dict['PLUME_TYPE']
 
 		## Set episode termination features
 		self.max_frames = plume_dict['STOP_FRAME']
@@ -193,10 +203,14 @@ class FlyNavigator(Env):
 		self.turn_durs = self.min_turn_dur + self.rng.exponential(scale = self.excess_turn_dur, size = self.max_frames)
 		self.num_turns = 0
 
-		## Initialize fly position and orientation
-		odor_on = self.odor_plume.frame > self.detection_threshold
-		odor_on_indices = np.transpose(odor_on.nonzero())
-		valid_locations = odor_on_indices*self.mm_per_px
+		## Initialize valid locations
+		if self.odor_features.plume_type=='movie' or self.odor_features.plume_type=='ribbon':
+			odor_on = self.odor_plume.frame > self.conc_threshold
+			odor_on_indices = np.transpose(odor_on.nonzero())
+			valid_locations = odor_on_indices*self.mm_per_px
+		elif self.odor_features.plume_type=='packet_simulation':
+			valid_locations = self.odor_plume.frame[:,0:2] + self.rng.normal(loc = 0, scale = 5, size = np.shape(self.odor_plume.frame[:,0:2]))
+
 
 		## Change the reward scale factor
 		self.reward_scale_factor = np.max(1 - self.episode_incrementer*self.reward_annealing, 0)
@@ -357,8 +371,16 @@ class FlyNavigator(Env):
 	
 		# Clear the previous plot
 		self.ax.clear()
+		if self.odor_features.plume_type == "packet_simulation":
+			## Generate the odor background
+			## DEFINE X AND Y RANGES
+			x_range = np.arange(self.min_wall_x, self.max_wall_x)
+			y_range = np.arange(self.min_wall_y, self.max_wall_y)
+			odor_background = self.odor_plume.plume_setup.compute_odor_at_timestep(x_range, y_range, packet_frame=self.odor_plume.frame)
+		elif self.odor_features.plume_type == "movie" or self.odor_features.plume_type == "ribbon":
+			odor_background = self.odor_plume.frame
 		# Plot odor background in grayscale
-		self.ax.imshow(self.odor_plume.frame.T, cmap='gray', extent=(0, self.odor_plume.frame.shape[0]*self.mm_per_px, 0, self.odor_plume.frame.shape[1]*self.mm_per_px))
+		self.ax.imshow(odor_background.T, cmap='gray', extent=(0, odor_background.shape[0]*self.mm_per_px, 0, odor_background.shape[1]*self.mm_per_px))
 		# Plot the odor source
 		self.ax.scatter(*self.source_location, color='green')
 		## Plot the goal radius

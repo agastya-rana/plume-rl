@@ -17,7 +17,7 @@ class SB3Model():
         self.env_class = config["training"]["ENV_CLASS"]
         self.model = None
 
-    def train(self, model_path=None):
+    def train(self, model_path=None, load_model=False):
         if self.model_class == "RecurrentPPO" or self.model_class == "PPO":
             n_envs = self.config["training"]["N_ENVS"] if "N_ENVS" in self.config["training"] else 1
             environment = VecMonitor(SubprocVecEnv([(lambda: self.env_class(self.rng, self.config)) for i in range(n_envs)]))
@@ -31,7 +31,7 @@ class SB3Model():
             assert config["training"]["RECORD_SUCCESS"] == True, "If using a callback, RECORD_SUCCESS must be set to True"
             callback = callback_model(config)
 
-        if model_path is None:
+        if not load_model:
             ## Train based on the model class
             if self.model_class == 'RecurrentPPO':
                 model = self.make_RNN_model(environment)
@@ -42,6 +42,8 @@ class SB3Model():
             else:
                 raise NotImplementedError
         else:
+            if model_path is None:
+                model_path = os.path.join(config["training"]["SAVE_DIRECTORY"], config["training"]['MODEL_NAME'])
             print("Loading existing model")
             model = self.load_model(model_path, environment)
         
@@ -197,17 +199,17 @@ class SB3Model():
                 self.model = self.load_model(save_path)
         else:
             print("Using model that was loaded before", flush=True)
-            model = self.model
         
         ## Is the problem that the model also stores the environment?
         print("Model loaded successfully; starting test")
+        print(type(self.model))
         ## Initialize relevant arrays
         episode_no = 0
         num_render = config["training"]["RENDER_TIMESTEPS"] if "RENDER_TIMESTEPS" in config["training"] else 10000
         total_timesteps = config["training"]['TEST_TIMESTEPS']
         record_steps = config["training"]['RECORD_TIMESTEPS'] if 'RECORD_TIMESTEPS' in config["training"] else total_timesteps
         
-        env = model.get_env()
+        env = self.model.get_env()
         num_envs = env.num_envs
         state_arr = np.empty((num_envs, record_steps, env.get_attr("obs_dim")[0]))
         action_arr = np.empty((num_envs, record_steps,) + self._get_action_space_dim(env.action_space))
@@ -223,7 +225,7 @@ class SB3Model():
             obs, rewards, dones, info = env.step(action)
             if timestep < record_steps:
                 state_arr[:, timestep, :] = obs
-                action_arr[:, timestep, :] = action
+                action_arr[:, timestep, :] = action.reshape(num_envs, -1)
                 reward_arr[:, timestep] = rewards
             if timestep < num_render:
                 env.render()
