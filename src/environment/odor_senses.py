@@ -265,16 +265,34 @@ class OdorFeaturesAllocentric(OdorFeatures):
 	## First get the gradient and hrc from the odor frame then use in functions
 	def _get_allocentric(self, odor_frame):
 
+		def packet_get_signal_at_pos(odor_frame, odor_frame_xy, x, y):
+			## Given a local frame beginning at global coordinates odor_frame_xy, return the signal at the global coordinates x, y
+			frame_x, frame_y = odor_frame.shape
+			x_local = x - odor_frame_xy[0]
+			y_local = y - odor_frame_xy[1]
+			if x_local < 0 or x_local >= frame_x or y_local < 0 or y_local >= frame_y:
+				return 0
+			else:
+				return odor_frame[x_local, y_local]
+		def movie_get_signal_at_pos(odor_frame, x, y):
+			## Given a local frame beginning at global coordinates odor_frame_xy, return the signal at the global coordinates x, y
+			frame_x, frame_y = odor_frame.shape
+			if x < 0 or x >= frame_x or y < 0 or y >= frame_y:
+				return 0
+			else:
+				return odor_frame[x, y]
+
 		if self.plume_type == "packet_simulation":
-			odor_coord = copy.deepcopy(odor_frame)
 			## Find the actual odor frame from coordinates of the packets
 			## Define the x and y ranges of the odor frame from the positions of left and right boxes - including padding to allow neighbors to work
-			x_range = np.arange(np.min(self.all_pts[:,0]) - 1, np.max(self.all_pts[:,0])+2)
-			y_range = np.arange(np.min(self.all_pts[:,1]) - 1, np.max(self.all_pts[:,1])+2)
-			odor_frame = np.zeros((round(self.max_wall_x/self.mm_per_px) + 1, round(self.max_wall_y/self.mm_per_px) + 1))
-			odor_frame[np.min(self.all_pts[:,0]) - 1: np.max(self.all_pts[:,0])+2, np.min(self.all_pts[:,1]) - 1: np.max(self.all_pts[:,1])+2] = packets.compute_odor_at_timestep(x_range, y_range, self.init_intensity, odor_coord)
+			x_min = np.min(self.all_pts[:,0]) - 1
+			y_min = np.min(self.all_pts[:,1]) - 1
+			x_range = np.arange(np.min(self.all_pts[:,0]) - 1, np.max(self.all_pts[:,0]) + 2)
+			y_range = np.arange(np.min(self.all_pts[:,1]) - 1, np.max(self.all_pts[:,1]) + 2)
+			odor_frame = packets.compute_odor_at_timestep(x_range, y_range, self.init_intensity, odor_frame)
 		if self.odor_prev is None:
 			self.odor_prev = np.zeros_like(odor_frame)
+			self.odor_prev_xy = (x_min, y_min)
 		gradx, grady, hrcx, hrcy = 0, 0, 0, 0
 		num = len(self.all_pts)
 		total_conc = 0
@@ -293,13 +311,24 @@ class OdorFeaturesAllocentric(OdorFeatures):
 			vx, vy = 0, 0
 			gx, gy = 0, 0
 			# Compute for each neighbor
-			central_prev = self.odor_prev[x, y]
-			central_signal = odor_frame[x, y]
+			if self.plume_type == "packet_simulation":
+				central_signal = packet_get_signal_at_pos(odor_frame, (x_min, y_min), x, y)
+				central_prev = packet_get_signal_at_pos(self.odor_prev, self.odor_prev_xy, x, y)
+			else:
+				central_signal = movie_get_signal_at_pos(odor_frame, x, y)
+				central_prev = movie_get_signal_at_pos(self.odor_prev, x, y)
+			
 			total_conc += central_signal
 			for direction, (nx, ny) in neighbors.items():
 				# Extract odor signals for the current neighbor and the central point
-				neighbor_signal = odor_frame[nx, ny]
-				neighbor_prev = self.odor_prev[nx, ny]
+				if self.plume_type == "packet_simulation":
+					neighbor_signal = packet_get_signal_at_pos(odor_frame, (x_min, y_min), nx, ny)
+					neighbor_prev = packet_get_signal_at_pos(self.odor_prev, self.odor_prev_xy, nx, ny)
+				else:
+					neighbor_signal = movie_get_signal_at_pos(odor_frame, nx, ny)
+					neighbor_prev = movie_get_signal_at_pos(self.odor_prev, nx, ny)
+				
+				# Compute the motion and gradient components
 				motion = central_prev * neighbor_signal - central_signal * neighbor_prev
 				gradient = neighbor_signal - central_signal				
 				# Project into allocentric coordinates
@@ -335,6 +364,8 @@ class OdorFeaturesAllocentric(OdorFeatures):
 			hrcy += vy/num
 		conc = total_conc/num
 		self.odor_prev = odor_frame
+		if self.plume_type == "packet_simulation":
+			self.odor_prev_xy = (x_min, y_min)
 		return conc, gradx, grady, hrcx, hrcy
 
 	def update(self, theta, pos, odor_frame):
@@ -346,22 +377,6 @@ class OdorFeaturesAllocentric(OdorFeatures):
 		self.all_pts = np.vstack((self.left_idxs, self.right_idxs)) ## dim = (2*num_pts, 2)
 		feats = self._get_allocentric(odor_frame=odor_frame)
 		return feats
-	
-	def compute_sig(self, all_points):
-
-		"""
-		Computes odor signal at a given set of locations (all_points). all_points is expected to be an array of size (n,2),
-		where first column indicates x-coordinate and second indicates y-coordinate.
-		"""
-
-		all_distances = scipy.spatial.distance_matrix(all_points, self.packet_pos_mat) #creates a matrix of size (num_points, num_packets) and stores distance from point i to packet j
-		scaled_all_distances = all_distances/(self.packet_sizes[None,:])
-		gaussian_part = np.exp(-(scaled_all_distances)**2)
-		packet_prefactor = self.init_intensity/(np.pi*self.packet_sizes**2)
-		all_signals_per_packet = gaussian_part * packet_prefactor[None, :]
-		all_total_signals = np.sum(all_signals_per_packet, axis = 1)
-
-		return all_total_signals
 	
 	def clear(self):
 		## Reset all values

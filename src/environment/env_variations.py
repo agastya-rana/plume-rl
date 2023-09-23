@@ -107,7 +107,6 @@ class HistoryNavigator(FlyNavigator):
 		self.history[0, :] = self.all_obs[:self.num_odor_obs]
 		return super().step(action)
 	
-	## TODO: Add history reset method
 	def reset(self):
 		self.history = np.zeros((self.history_len, self.num_odor_obs))
 		return super().reset()

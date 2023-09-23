@@ -55,6 +55,8 @@ class FlyNavigator(Env):
 				self.odor_plume = OdorPlumeFromMovie(config) ## Defines the odor plume the fly is navigating in.
 			elif plume_dict['PLUME_TYPE'] == 'ribbon':
 				self.odor_plume = StaticGaussianRibbon(config)
+			elif plume_dict['PLUME_TYPE'] == 'packet_simulation':
+				self.odor_plume = SimulatedPacketPlume(config)
 			else:
 				raise ValueError("Plume type not recognized")
 
@@ -147,16 +149,18 @@ class FlyNavigator(Env):
 		self.mm_per_px = mm_per_px
 		self.odor_features.mm_per_px = mm_per_px
 		self.source_location = plume_dict['SOURCE_LOCATION_MM']
-		self.odor_features.plume_type = plume_dict['PLUME_TYPE']
-		if plume_dict['PLUME_TYPE'] == 'packet_simulation':
-			self.odor_features.init_intensity = plume_dict['INIT_INTENSITY']
-			assert 'WALL_BOX_MM' in plume_dict, "WALL_BOX_MM must be specified for boundary of packet sim flies"
-			(self.odor_features.min_wall_x, self.odor_features.max_wall_x), (self.odor_features.min_wall_y, self.odor_features.max_wall_y) = plume_dict["WALL_BOX_MM"]
-
+		
 		## Set up odor features box
 		self.odor_features.std_left_box, self.odor_features.std_right_box = self.odor_features.make_L_R_std_box(self.mm_per_px, self.antenna_height, self.antenna_width)
 		self.odor_features.num_pts = np.shape(self.odor_features.std_left_box)[0]
-		self.odor_features.plume_type = plume_dict['PLUME_TYPE']
+		if 'PLUME_TYPE' in plume_dict:
+			self.odor_features.plume_type = plume_dict['PLUME_TYPE']
+		else:
+			self.odor_features.plume_type = 'movie'
+		if 'PLUME_TYPE' in plume_dict and plume_dict['PLUME_TYPE'] == 'packet_simulation':
+			self.odor_features.init_intensity = plume_dict['INIT_INTENSITY']
+			assert 'WALL_BOX_MM' in plume_dict, "WALL_BOX_MM must be specified for boundary of packet sim flies"
+			(self.odor_features.min_wall_x, self.odor_features.max_wall_x), (self.odor_features.min_wall_y, self.odor_features.max_wall_y) = plume_dict["WALL_BOX_MM"]
 
 		## Set episode termination features
 		self.max_frames = plume_dict['STOP_FRAME']
@@ -204,11 +208,11 @@ class FlyNavigator(Env):
 		self.num_turns = 0
 
 		## Initialize valid locations
-		if self.odor_features.plume_type=='movie' or self.odor_features.plume_type=='ribbon':
-			odor_on = self.odor_plume.frame > self.conc_threshold
+		if self.odor_features.plume_type == 'movie' or self.odor_features.plume_type == 'ribbon':
+			odor_on = self.odor_plume.frame > self.detection_threshold
 			odor_on_indices = np.transpose(odor_on.nonzero())
 			valid_locations = odor_on_indices*self.mm_per_px
-		elif self.odor_features.plume_type=='packet_simulation':
+		elif self.odor_features.plume_type == 'packet_simulation':
 			valid_locations = self.odor_plume.frame[:,0:2] + self.rng.normal(loc = 0, scale = 5, size = np.shape(self.odor_plume.frame[:,0:2]))
 
 

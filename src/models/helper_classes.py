@@ -25,6 +25,43 @@ class FilterExtractor(BaseFeaturesExtractor):
         x = torch.cat((x, observations[:, -self.theta_dim:]), dim=1) ## Concatenate along the last dimension to get a tensor of shape (batch_size, n_heads*n_odor + theta_dim)
         return x
 
+class FilterPairwiseProducts(BaseFeaturesExtractor):
+	def __init__(self, observation_space, n_heads=1, n_odor=3, history_len=0, theta_dim=2, use_tanh=False):
+		self.n_odor = n_odor
+		self.n_heads = n_heads
+		self.sub_features_dim = n_heads*n_odor + theta_dim ## The features dimension is the number of neurons in the first layer + the number of theta values
+		self.theta_dim = theta_dim
+		self.history_len = history_len + 1 ## + 1 because the current timestep is also included for easier manipulation in the forward method
+		features_dim = self.sub_features_dim + int(self.sub_features_dim*(self.sub_features_dim-1)/2) #have sub features plus sub choose 2 to include pairwise products (excluding squares)
+		super().__init__(observation_space, features_dim)
+		# Define the first layer with n_heads*n_odor neurons that is a linear filter with offset
+		self.filter = nn.ModuleList([nn.Linear(self.history_len, 1, bias = False) for _ in range(n_heads*n_odor)])
+		self.use_tanh = use_tanh
+
+	def forward(self, observations):
+		## Remove the theta values from the observations
+		x = observations[:, :-self.theta_dim]
+		x = x.view(-1, self.history_len, self.n_odor) ## Reshape to (batch_size, history_len, n_odor)
+		x = [fc(x[:, :, i // self.n_heads]) for i, fc in enumerate(self.filter)] ## List of tensors of shape (batch_size, 1)
+		x = torch.cat(x, dim=1) ## Concatenate along the last dimension to get a tensor of shape (batch_size, n_heads*n_odor)
+		if self.use_tanh:
+			x = torch.tanh(x)
+		## Add back the theta values to x and return
+		x = torch.cat((x, observations[:, -self.theta_dim:]), dim=1) ## Concatenate along the last dimension to get a tensor of shape (batch_size, n_heads*n_odor + theta_dim)
+		# Compute the pairwise products of all elements in x
+		pairwise_products = []
+		for i in range(self.sub_features_dim):
+			for j in range(i + 1, self.sub_features_dim):
+				pairwise_product = x[:, i] * x[:, j]
+				pairwise_product = pairwise_product.unsqueeze(1) #makes sure it retains the form that the batch is a vertical axis
+				pairwise_products.append(pairwise_product)
+
+		pairwise_products = torch.cat(pairwise_products, dim=1)
+		# Append the new pairwise products to the existing x vector
+		x = torch.cat((x,pairwise_products), dim=1)
+		return x
+
+
 ## Deletes extra padding on the right-side (future padding is not needed, since TCNs are causal)
 class Chomp1d(nn.Module):
     def __init__(self, chomp_size):

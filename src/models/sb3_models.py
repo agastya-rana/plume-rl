@@ -3,6 +3,7 @@ from stable_baselines3 import DQN, PPO
 from sb3_contrib import RecurrentPPO
 from src.environment.utilities import *
 from src.models.callbacks import *
+from src.models.helper_classes import *
 import stable_baselines3
 import numpy as np
 import time
@@ -130,6 +131,9 @@ class SB3Model():
         gamma = training_dict.get('GAMMA', 1)
         min_epsilon = training_dict.get('MIN_EPSILON', 0.01)
         target_update_interval = training_dict.get('TARGET_UPDATE_INTERVAL', 10000)
+        buffer_size = training_dict.get("BUFFER_SIZE", 1000000)
+        max_grad_norm = training_dict.get("MAX_GRAD_NORM", 10)
+        train_freq = training_dict.get("TRAIN_FREQ", (4, "step"))
 
         if 'N_HIDDEN_UNITS' in training_dict and 'N_HIDDEN_LAYERS' in training_dict:
             arch = [training_dict['N_HIDDEN_UNITS']]*training_dict['N_HIDDEN_LAYERS']
@@ -145,17 +149,23 @@ class SB3Model():
         
         model = DQN("MlpPolicy", environment, verbose = 1, tensorboard_log=training_dict["TB_LOG"], gamma = gamma, 
         exploration_final_eps = min_epsilon, learning_rate=learning_rate, policy_kwargs=policy_kwargs, exploration_fraction=exploration_fraction, 
-        target_update_interval=target_update_interval,)
+        target_update_interval=target_update_interval, buffer_size=buffer_size, max_grad_norm=max_grad_norm, train_freq=train_freq,)
         return model
 
     @staticmethod
     def _add_feature_extractor_policy(policy_kwargs, config, environment):
         training_dict = config['training']
-        if training_dict['FEATURES_EXTRACTOR_CLASS'] is not None:
+        if training_dict['FEATURES_EXTRACTOR_CLASS'] == FilterExtractor:
             policy_kwargs['features_extractor_class'] = training_dict['FEATURES_EXTRACTOR_CLASS']
             use_sin_cos = config["state"]['USE_COSINE_AND_SIN_THETA'] if 'USE_COSINE_AND_SIN_THETA' in config["state"] else True
             theta_dim = 2 if use_sin_cos else 1
             policy_kwargs['features_extractor_kwargs'] = { "n_odor": len(config['state']["FEATURES"]), "n_heads": training_dict['N_HEADS'], "history_len": config["state"]['HIST_LEN'], "theta_dim": theta_dim}
+        elif training_dict['FEATURES_EXTRACTOR_CLASS'] == FilterPairwiseProducts:
+            policy_kwargs['features_extractor_class'] = training_dict['FEATURES_EXTRACTOR_CLASS']
+            use_sin_cos = config["state"]['USE_COSINE_AND_SIN_THETA'] if 'USE_COSINE_AND_SIN_THETA' in config["state"] else True
+            theta_dim = 2 if use_sin_cos else 1
+            use_tanh = training_dict["USE_TANH"] if "USE_TANH" in training_dict else False
+            policy_kwargs['features_extractor_kwargs'] = { "n_odor": len(config['state']["FEATURES"]), "n_heads": training_dict['N_HEADS'], "history_len": config["state"]['HIST_LEN'], "theta_dim": theta_dim, "use_tanh": use_tanh}
         return policy_kwargs
 
     @staticmethod
